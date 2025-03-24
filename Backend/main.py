@@ -3,15 +3,16 @@ from schema.database import SessionLocal, engine
 from schema.models import Base
 from routers import users
 from fastapi.middleware.cors import CORSMiddleware
-from schema.models import Base
 
 app = FastAPI()
 
+# Create database tables
 Base.metadata.create_all(bind=engine)
 
+# Include routers
 app.include_router(users.router)
 
-
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # For development, allow all origins (restrict in production)
@@ -19,6 +20,10 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+@app.get("/")
+async def root():
+    return {"message": "Welcome to BrightMinds API"}
 
 # Add this at the bottom of your existing main.py
 if __name__ == "__main__":

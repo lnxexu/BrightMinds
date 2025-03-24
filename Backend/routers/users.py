@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from schema.database import get_db
 from sqlalchemy.orm import Session
-from typing import List, Dict
+from typing import List
 from datetime import datetime
 from schema.models import User, UserCreate, UserResponse
 from passlib.context import CryptContext
@@ -14,15 +14,10 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 # get all users
-@router.get("/users", response_model=List[Dict])
+@router.get("/users", response_model=List[UserResponse])
 def get_users(db: Session = Depends(get_db)):
     users = db.query(User).all()
-    return users
-
-@router.get("/users", response_model=List[UserCreate])
-def get_users(db: Session = Depends(get_db)):
-    users = db.query(User).all()
-    return users
+    return [UserResponse.model_validate(user) for user in users]
 
 @router.post("/users/register", response_model=UserResponse)
 async def create_user(user: UserCreate, db: Session = Depends(get_db)):
@@ -53,7 +48,7 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(new_user)
         
-        return new_user
+        return UserResponse.model_validate(new_user)
 
     except HTTPException as he:
         raise he
