@@ -48,14 +48,17 @@
         </div>
 
         <div class="social-login">
-          <button type="button" class="social-button google">
-            <i class="fab fa-google"></i>
-            <span>Continue with Google</span>
-          </button>
-          <button type="button" class="social-button facebook">
-            <i class="fab fa-facebook-f"></i>
-            <span>Continue with Facebook</span>
-          </button>
+          <p class="divider">Or continue with</p>
+          <div class="social-buttons">
+            <button type="button" @click="loginWithGoogle" class="google-btn">
+              <i class="fab fa-google"></i>
+              <span>Google</span>
+            </button>
+            <button type="button" @click="loginWithFacebook" class="facebook-btn">
+              <i class="fab fa-facebook-f"></i>
+              <span>Facebook</span>
+            </button>
+          </div>
         </div>
       </form>
 
@@ -76,63 +79,161 @@
 </template>
 
 <script>
+import { ref, computed } from 'vue';
+import { useStore } from 'vuex';
+import { useRouter } from 'vue-router';
 import axios from 'axios';
-import { mapState } from 'vuex';
 
 export default {
-  data() {
-    return {
-      email: "",
-      password: "",
-      showPassword: false,
-      rememberMe: false,
-      loading: false,
-      error: null
+  name: 'LoginForm',
+  setup() {
+    const store = useStore();
+    const router = useRouter();
+    const email = ref('');
+    const password = ref('');
+    const showPassword = ref(false);
+    const error = ref('');
+    const loading = ref(false);
+
+    const isLoggedIn = computed(() => store.state.isLoggedIn);
+    const currentUser = computed(() => store.state.currentUser);
+
+    // Load the Google API
+    const loadGoogleAPI = () => {
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
     };
-  },
-  computed: {
-    computed: {
-      ...mapState({
-        isLoggedIn: state => state.isLoggedIn,
-        currentUser: state => state.currentUser
-      })
-    }
-  },
-  methods: {
-    async login() {
+
+    // Initialize Facebook SDK
+    const initFacebookSDK = () => {
+      window.fbAsyncInit = function() {
+        FB.init({
+          appId: 'YOUR_FACEBOOK_APP_ID', // Replace with your Facebook App ID
+          cookie: true,
+          xfbml: true,
+          version: 'v12.0'
+        });
+      };
+
+      // Load Facebook SDK
+      (function(d, s, id) {
+        var js, fjs = d.getElementsByTagName(s)[0];
+        if (d.getElementById(id)) return;
+        js = d.createElement(s); js.id = id;
+        js.src = "https://connect.facebook.net/en_US/sdk.js";
+        fjs.parentNode.insertBefore(js, fjs);
+      }(document, 'script', 'facebook-jssdk'));
+    };
+
+    const loginWithGoogle = async () => {
+      try {
+        const client = google.accounts.oauth2.initTokenClient({
+          client_id: 'YOUR_GOOGLE_CLIENT_ID', // Replace with your Google Client ID
+          scope: 'email profile',
+          callback: async (response) => {
+            if (response.access_token) {
+              const result = await fetch('http://127.0.0.1:8000/oauth/auth/google', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  access_token: response.access_token,
+                  provider: 'google'
+                })
+              });
+
+              const data = await result.json();
+              if (data.success) {
+                store.commit('setToken', data.token);
+                store.commit('setUser', data.user);
+                store.commit('setLoggedIn', true);
+                router.push('/courses');
+              } else {
+                error.value = data.error_message || 'Failed to login with Google';
+              }
+            }
+          },
+        });
+        client.requestAccessToken();
+      } catch (err) {
+        error.value = 'Failed to initialize Google login';
+        console.error(err);
+      }
+    };
+
+    const loginWithFacebook = async () => {
+      try {
+        FB.login(async function(response) {
+          if (response.authResponse) {
+            const result = await fetch('http://127.0.0.1:8000/oauth/auth/facebook', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                access_token: response.authResponse.accessToken,
+                provider: 'facebook'
+              })
+            });
+
+            const data = await result.json();
+            if (data.success) {
+              store.commit('setToken', data.token);
+              store.commit('setUser', data.user);
+              store.commit('setLoggedIn', true);
+              router.push('/courses');
+            } else {
+              error.value = data.error_message || 'Failed to login with Facebook';
+            }
+          } else {
+            error.value = 'Facebook login was cancelled';
+          }
+        }, { scope: 'public_profile,email' });
+      } catch (err) {
+        error.value = 'Failed to initialize Facebook login';
+        console.error(err);
+      }
+    };
+
+    // Regular email/password login
+    const login = async () => {
       try {
         // Reset error state
-        this.error = null;
+        error.value = null;
 
         // Basic validation
-        if (!this.email || !this.password) {
-          this.error = "Please fill in all fields";
+        if (!email.value || !password.value) {
+          error.value = "Please fill in all fields";
           return;
         }
 
         // Email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(this.email)) {
-          this.error = "Please enter a valid email address";
+        if (!emailRegex.test(email.value)) {
+          error.value = "Please enter a valid email address";
           return;
         }
 
         // Set loading state
-        this.loading = true;
+        loading.value = true;
 
         // Make API call to backend
         const response = await axios.get('http://127.0.0.1:8000/users/verify', {
           params: {
-            email: this.email,
-            password: this.password
+            email: email.value,
+            password: password.value
           }
         });
 
         const data = response.data;
 
         // Update Vuex store with correct mutations
-        this.$store.commit('login', data); // Sets currentUser
-        this.$store.commit('setLoginState', true); // Sets isLoggedIn
+        store.commit('login', data); // Sets currentUser
+        store.commit('setLoginState', true); // Sets isLoggedIn
 
         // Store token if present
         if (data.token) {
@@ -140,33 +241,38 @@ export default {
         }
 
         // Remember email if checkbox is checked
-        if (this.rememberMe) {
-          localStorage.setItem('email', this.email);
+        if (rememberMe.value) {
+          localStorage.setItem('email', email.value);
         }
 
         // Emit login event
-        this.$emit('login-success', data);
+        // this.$emit('login-success', data);
 
         // Redirect to courses page
-        this.$router.push('/courses');
+        router.push('/courses');
 
       } catch (err) {
-        this.error = err.response?.data?.detail || err.message || 'An error occurred during login';
+        error.value = err.response?.data?.detail || err.message || 'An error occurred during login';
         console.error('Login error:', err);
       } finally {
-        this.loading = false;
+        loading.value = false;
       }
-    },
+    };
 
-    async loginWithGoogle() {
-      // Implement Google OAuth login
-      console.log('Google login not implemented');
-    },
+    loadGoogleAPI();
+    initFacebookSDK();
 
-    async loginWithFacebook() {
-      // Implement Facebook OAuth login
-      console.log('Facebook login not implemented');
-    }
+    return {
+      email,
+      password,
+      showPassword,
+      rememberMe: ref(false),
+      error,
+      loading,
+      login,
+      loginWithGoogle,
+      loginWithFacebook
+    };
   },
   mounted() {
     // Check if there's a remembered email
@@ -353,7 +459,12 @@ export default {
   gap: 1rem;
 }
 
-.social-button {
+.social-buttons {
+  display: flex;
+  gap: 1rem;
+}
+
+.google-btn, .facebook-btn {
   width: 100%;
   padding: 1rem;
   border-radius: 12px;
@@ -368,20 +479,20 @@ export default {
   color: #374151;
 }
 
-.social-button:hover {
+.google-btn:hover, .facebook-btn:hover {
   background: #f8fafc;
   transform: translateY(-2px);
 }
 
-.social-button i {
+.google-btn i, .facebook-btn i {
   font-size: 1.25rem;
 }
 
-.social-button.google i {
+.google-btn i {
   color: #ea4335;
 }
 
-.social-button.facebook i {
+.facebook-btn i {
   color: #1877f2;
 }
 

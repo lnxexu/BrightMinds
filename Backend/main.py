@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from schema.database import SessionLocal, engine
 from schema.models import Base
-from routers import users
+from routers import users, oauth
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -11,6 +11,7 @@ Base.metadata.create_all(bind=engine)
 
 # Include routers
 app.include_router(users.router)
+app.include_router(oauth.router, prefix="/oauth", tags=["oauth"])
 
 # CORS middleware
 app.add_middleware(
@@ -25,7 +26,6 @@ app.add_middleware(
 async def root():
     return {"message": "Welcome to BrightMinds API"}
 
-# Add this at the bottom of your existing main.py
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
