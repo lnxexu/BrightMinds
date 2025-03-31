@@ -1,17 +1,18 @@
-from fastapi import FastAPI
-from schema.database import SessionLocal, engine
-from schema.models import Base
-from routers import users, oauth
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+import os
+from supabase import create_client, Client
+from dotenv import load_dotenv
 
-app = FastAPI()
+# Load environment variables
+load_dotenv()
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
+app = FastAPI(title="BrightMinds API")
 
-# Include routers
-app.include_router(users.router)
-app.include_router(oauth.router, prefix="/oauth", tags=["oauth"])
+# Supabase client setup
+supabase_url = "https://hupwxuuqqwvaoswnhtmi.supabase.co"
+supabase_key = os.getenv("SUPABASE_KEY")
+supabase: Client = create_client(supabase_url, supabase_key)
 
 # CORS middleware
 app.add_middleware(
@@ -26,6 +27,32 @@ app.add_middleware(
 async def root():
     return {"message": "Welcome to BrightMinds API"}
 
+@app.get("/courses", tags=["courses"])
+async def get_courses():
+    try:
+        response = supabase.table('courses').select("*").execute()
+        return {"courses": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/courses/{course_id}", tags=["courses"])
+async def get_course(course_id: str):
+    try:
+        response = supabase.table('courses').select("*").eq('id', course_id).execute()
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Course not found")
+        return {"course": response.data[0]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/courses", tags=["courses"])
+async def create_course(course: dict):
+    try:
+        response = supabase.table('courses').insert(course).execute()
+        return {"message": "Course created successfully", "course": response.data[0]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
