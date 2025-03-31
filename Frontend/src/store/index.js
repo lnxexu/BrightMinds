@@ -8,29 +8,43 @@ export default createStore({
     assessments: [],
     currentUser: null,
     isLoggedIn: false,
+    error: null,
   },
   actions: {
     checkAuthState({ commit }) {
       return new Promise((resolve) => {
         const token = localStorage.getItem("token");
-        commit("setLoginState", !!token);
+        commit("setLoggedIn", !!token);
         resolve();
       });
     },
     logout({ commit }) {
+      // Clear all stored data and reset state synchronously
       localStorage.removeItem('token');
       localStorage.removeItem('email');
+      
+      // Reset store state
       commit('setUser', null);
-      commit('setIsLoggedIn', false);
-      commit('setToken', null);
+      commit('setLoggedIn', false);
+      commit('resetState');
+      
+      // Return resolved promise immediately
+      return Promise.resolve();
     }
   },
   mutations: {
-    login(state, user) {
+    setUser(state, user) {
+      // Ensure first name is extracted from full name if not already set
+      if (!user.firstName && user.full_name) {
+        user.firstName = user.full_name.split(' ')[0];
+      }
       state.currentUser = user;
     },
-    logout(state) {
-      state.currentUser = null;
+    setLoggedIn(state, value) {
+      state.isLoggedIn = value;
+    },
+    setError(state, error) {
+      state.error = error;
     },
     addCourse(state, course) {
       state.courses.push(course);
@@ -41,8 +55,15 @@ export default createStore({
     addAssessment(state, assessment) {
       state.assessments.push(assessment);
     },
-    setLoginState(state, value) {
-      state.isLoggedIn = value;
-    },
+    resetState(state) {
+      // Reset all state to initial values
+      state.users = [];
+      state.courses = [];
+      state.messages = [];
+      state.assessments = [];
+      state.currentUser = null;
+      state.isLoggedIn = false;
+      state.error = null;
+    }
   },
 });

@@ -1,5 +1,11 @@
 <template>
   <div id="app" class="min-h-screen flex flex-col bg-gradient">
+    <!-- Global Toast that persists across navigation -->
+    <Toast v-if="showToast" 
+           :message="toastMessage" 
+           :type="toastType" 
+           @close="showToast = false" />
+           
     <header class="header">
       <div class="navbar">
         <!-- Logo - Always Visible -->
@@ -50,7 +56,7 @@
               <i class="fas fa-chevron-down"></i>
               
               <!-- Dropdown Menu -->
-              <div v-show="showProfileMenu" class="profile-dropdown">
+              <div v-if="showProfileMenu" class="profile-dropdown">
                 <router-link to="/profile" class="dropdown-item">
                   <i class="fas fa-user"></i>
                   My Profile
@@ -59,7 +65,7 @@
                   <i class="fas fa-cog"></i>
                   Settings
                 </router-link>
-                <button @click="logout" class="dropdown-item logout">
+                <button @click.stop="logout" class="dropdown-item logout">
                   <i class="fas fa-sign-out-alt"></i>
                   Logout
                 </button>
@@ -82,7 +88,7 @@
 
     <footer class="footer">
       <div class="footer-content">
-        <p class="copyright">© 2025 Bright Minds Elementary School. All Rights Reserved.</p>
+        <p class="copyright"> 2025 Bright Minds Elementary School. All Rights Reserved.</p>
         <div class="social-links">
           <a href="#" class="social-link">
             <i class="fab fa-facebook-f"></i>
@@ -100,31 +106,97 @@
 </template>
 
 <script>
-import { mapState } from 'vuex'
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useStore } from 'vuex';
+import { mapState } from 'vuex';
+import { useRouter } from 'vue-router';
+import Toast from './components/Toast.vue';
 
 export default {
-  name: "App",
-  data() {
+  name: 'App',
+  components: {
+    Toast
+  },
+  setup() {
+    const store = useStore();
+    const router = useRouter();
+    const showProfileMenu = ref(false);
+    const showToast = ref(false);
+    const toastMessage = ref('');
+    const toastType = ref('info');
+    const userAvatar = ref('/default-avatar.png');
+
+    // Get first name from store
+    const username = computed(() => {
+      const user = store.state.currentUser;
+      return user?.firstName || 'User';
+    });
+
+    // Toggle profile menu
+    const toggleProfileMenu = () => {
+      showProfileMenu.value = !showProfileMenu.value;
+    };
+
+    // Handle click outside to close menu
+    const handleClickOutside = (event) => {
+      if (showProfileMenu.value && !event.target.closest('.user-profile')) {
+        showProfileMenu.value = false;
+      }
+    };
+
+    // Add click outside listener
+    onMounted(() => {
+      document.addEventListener('click', handleClickOutside);
+    });
+
+    onUnmounted(() => {
+      document.removeEventListener('click', handleClickOutside);
+    });
+
+    // Global toast handler
+    const showGlobalToast = (message, type = 'success') => {
+      toastMessage.value = message;
+      toastType.value = type;
+      showToast.value = true;
+    };
+
+    // Listen for global events
+    store.subscribe((mutation, state) => {
+      if (mutation.type === 'setLoggedIn') {
+        if (state.isLoggedIn) {
+          showGlobalToast('Login successful!', 'success');
+        }
+      }
+    });
+
+    // Logout handler
+    const logout = async () => {
+      try {
+        await store.dispatch('logout');
+        showGlobalToast('Successfully logged out');
+        showProfileMenu.value = false;
+        router.push('/login');
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
+    };
+
     return {
-      showProfileMenu: false,
-      userAvatar: '/default-avatar.png', // Add a default avatar path
-      username: 'User' // Add a default username
-    }
+      showProfileMenu,
+      showToast,
+      toastMessage,
+      toastType,
+      userAvatar,
+      username,
+      showGlobalToast,
+      toggleProfileMenu,
+      logout
+    };
   },
   computed: {
     ...mapState({
       isLoggedIn: state => state.isLoggedIn
     })
-  },
-  methods: {
-    toggleProfileMenu() {
-      this.showProfileMenu = !this.showProfileMenu
-    },
-    logout() {
-      this.$store.dispatch('logout')
-      this.showProfileMenu = false
-      this.$router.push('/login')
-    }
   },
   created() {
     // Check auth state when app loads
@@ -321,40 +393,43 @@ body {
   top: 100%;
   right: 0;
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   min-width: 200px;
-  margin-top: 0.5rem;
-  z-index: 100;
+  z-index: 1000;
+  margin-top: 8px;
 }
 
 .dropdown-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 1rem;
-  color: var(--text-secondary);
+  gap: 8px;
+  padding: 12px 16px;
+  color: #333;
   text-decoration: none;
-  transition: all 0.3s ease;
+  transition: background-color 0.2s;
+  cursor: pointer;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
 }
 
 .dropdown-item:hover {
-  background: rgba(79, 70, 229, 0.08);
-  color: var(--primary);
+  background-color: #f5f5f5;
+}
+
+.dropdown-item i {
+  width: 20px;
 }
 
 .dropdown-item.logout {
-  border-top: 1px solid #e5e7eb;
-  color: #ef4444;
-  width: 100%;
-  text-align: left;
-  background: none;
-  border: none;
-  cursor: pointer;
+  color: #f44336;
+  border-top: 1px solid #eee;
 }
 
 .dropdown-item.logout:hover {
-  background: #fef2f2;
+  background-color: #ffebee;
 }
 
 /* Responsive adjustments for profile */

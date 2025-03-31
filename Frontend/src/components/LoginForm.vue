@@ -7,6 +7,8 @@
       </div>
 
       <form @submit.prevent="login" class="login-form">
+        <!-- Removed old error display div since we're using Toast now -->
+
         <div class="form-group">
           <label for="email">Email</label>
           <div class="input-wrapper">
@@ -38,8 +40,8 @@
           </label>
         </div>
 
-        <button type="submit" class="login-button">
-          <span>Log In</span>
+        <button type="submit" class="login-button" :disabled="loading">
+          <span>{{ loading ? 'Logging in...' : 'Log In' }}</span>
           <i class="fas fa-arrow-right"></i>
         </button>
 
@@ -64,13 +66,9 @@
 
       <p class="signup-text">
         Don't have an account?
-        <a href="#" class="signup-link">Sign up</a>
+        <router-link to="/register" class="signup-link">Sign up</router-link>
       </p>
     </div>
-  </div>
-
-  <div v-if="error" class="error-message">
-    {{ error }}
   </div>
 
   <div v-if="loading" class="loading-spinner">
@@ -79,26 +77,23 @@
 </template>
 
 <script>
-import { ref, computed } from 'vue';
-import { useStore } from 'vuex';
+import { defineComponent, ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import axios from 'axios';
+import { useStore } from 'vuex';
 
-export default {
+export default defineComponent({
   name: 'LoginForm',
   setup() {
-    const store = useStore();
     const router = useRouter();
+    const store = useStore();
+    
+    // Form data
     const email = ref('');
     const password = ref('');
+    const rememberMe = ref(false);
     const showPassword = ref(false);
-    const error = ref('');
     const loading = ref(false);
-
-    const isLoggedIn = computed(() => store.state.isLoggedIn);
-    const currentUser = computed(() => store.state.currentUser);
-
-    // Load the Google API
+    
     const loadGoogleAPI = () => {
       const script = document.createElement('script');
       script.src = 'https://accounts.google.com/gsi/client';
@@ -107,7 +102,6 @@ export default {
       document.head.appendChild(script);
     };
 
-    // Initialize Facebook SDK
     const initFacebookSDK = () => {
       window.fbAsyncInit = function() {
         FB.init({
@@ -148,19 +142,18 @@ export default {
 
               const data = await result.json();
               if (data.success) {
-                store.commit('setToken', data.token);
                 store.commit('setUser', data.user);
                 store.commit('setLoggedIn', true);
                 router.push('/courses');
               } else {
-                error.value = data.error_message || 'Failed to login with Google';
+                // Removed local toast handling
               }
             }
           },
         });
         client.requestAccessToken();
       } catch (err) {
-        error.value = 'Failed to initialize Google login';
+        // Removed local toast handling
         console.error(err);
       }
     };
@@ -182,83 +175,82 @@ export default {
 
             const data = await result.json();
             if (data.success) {
-              store.commit('setToken', data.token);
               store.commit('setUser', data.user);
               store.commit('setLoggedIn', true);
               router.push('/courses');
             } else {
-              error.value = data.error_message || 'Failed to login with Facebook';
+              // Removed local toast handling
             }
           } else {
-            error.value = 'Facebook login was cancelled';
+            // Removed local toast handling
           }
         }, { scope: 'public_profile,email' });
       } catch (err) {
-        error.value = 'Failed to initialize Facebook login';
+        // Removed local toast handling
         console.error(err);
       }
     };
 
-    // Regular email/password login
     const login = async () => {
       try {
-        // Reset error state
-        error.value = null;
+        // Reset states
+        loading.value = true;
 
         // Basic validation
         if (!email.value || !password.value) {
-          error.value = "Please fill in all fields";
+          // Removed local toast handling
           return;
         }
 
         // Email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email.value)) {
-          error.value = "Please enter a valid email address";
+          // Removed local toast handling
           return;
         }
 
-        // Set loading state
-        loading.value = true;
-
         // Make API call to backend
-        const response = await axios.get('http://127.0.0.1:8000/users/verify', {
-          params: {
-            email: email.value,
-            password: password.value
-          }
-        });
-
-        const data = response.data;
-
-        // Update Vuex store with correct mutations
-        store.commit('login', data); // Sets currentUser
-        store.commit('setLoginState', true); // Sets isLoggedIn
-
-        // Store token if present
-        if (data.token) {
-          localStorage.setItem('token', data.token);
+        const response = await fetch(`http://127.0.0.1:8000/login/${encodeURIComponent(email.value)}/${encodeURIComponent(password.value)}`);
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.detail || "Invalid email or password");
         }
 
-        // Remember email if checkbox is checked
+        // Get user's full name and split to get first name
+        const fullName = data.user.full_name || '';
+        const firstName = fullName.split(' ')[0];
+
+        // Update Vuex store with user data including first name
+        store.commit('setUser', { ...data.user, firstName });
+        store.commit('setLoggedIn', true);
+
+        // Store email if remember me is checked
         if (rememberMe.value) {
           localStorage.setItem('email', email.value);
+        } else {
+          localStorage.removeItem('email');
         }
 
-        // Emit login event
-        // this.$emit('login-success', data);
-
-        // Redirect to courses page
+        // Navigate to courses page
         router.push('/courses');
 
       } catch (err) {
-        error.value = err.response?.data?.detail || err.message || 'An error occurred during login';
+        // Removed local toast handling
         console.error('Login error:', err);
       } finally {
         loading.value = false;
       }
     };
 
+    // Load remembered email if exists
+    if (localStorage.getItem('email')) {
+      email.value = localStorage.getItem('email');
+      rememberMe.value = true;
+    }
+
+    // Initialize social login SDKs
     loadGoogleAPI();
     initFacebookSDK();
 
@@ -266,81 +258,91 @@ export default {
       email,
       password,
       showPassword,
-      rememberMe: ref(false),
-      error,
       loading,
+      rememberMe,
       login,
       loginWithGoogle,
       loginWithFacebook
     };
-  },
-  mounted() {
-    // Check if there's a remembered email
-    const rememberedEmail = localStorage.getItem('email');
-    if (rememberedEmail) {
-      this.email = rememberedEmail;
-      this.rememberMe = true;
-    }
   }
-};
+});
 </script>
 
 <style scoped>
 .login-container {
-  min-height: 100vh;
   display: flex;
-  align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
-  padding: 2rem;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f5f5f5;
+  padding: 20px;
 }
 
 .login-card {
   background: white;
-  border-radius: 24px;
-  padding: 2.5rem;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   width: 100%;
-  max-width: 480px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  max-width: 400px;
 }
 
 .card-header {
   text-align: center;
-  margin-bottom: 2.5rem;
+  margin-bottom: 30px;
 }
 
 .card-title {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #1f2937;
-  margin-bottom: 0.5rem;
+  font-size: 24px;
+  color: #333;
+  margin-bottom: 8px;
 }
 
 .card-subtitle {
-  color: #6b7280;
-  font-size: 1.1rem;
+  color: #666;
+  font-size: 14px;
 }
 
 .form-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: 20px;
 }
 
-.form-group label {
-  display: block;
-  font-weight: 500;
-  color: #374151;
-  margin-bottom: 0.5rem;
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-wrapper i {
+  position: absolute;
+  left: 12px;
+  color: #666;
+}
+
+input {
+  width: 100%;
+  padding: 12px 12px 12px 40px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.3s;
+}
+
+input:focus {
+  outline: none;
+  border-color: #4CAF50;
 }
 
 .password-label {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 8px;
 }
 
 .forgot-link {
-  color: #4f46e5;
-  font-size: 0.875rem;
+  color: #4CAF50;
+  font-size: 14px;
   text-decoration: none;
 }
 
@@ -348,84 +350,83 @@ export default {
   text-decoration: underline;
 }
 
-.input-wrapper {
-  display: flex;
-  align-items: center;
-  background: #f8fafc;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 0.75rem 1rem;
-  transition: all 0.3s ease;
-}
-
-.input-wrapper:focus-within {
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-}
-
-.input-wrapper i {
-  color: #6b7280;
-  margin-right: 0.75rem;
-}
-
-.input-wrapper input {
-  flex: 1;
-  border: none;
-  background: transparent;
-  font-size: 1rem;
-  color: #1f2937;
-}
-
-.input-wrapper input:focus {
-  outline: none;
-}
-
 .toggle-password {
+  position: absolute;
+  right: 12px;
   background: none;
   border: none;
-  color: #6b7280;
+  color: #666;
   cursor: pointer;
-  padding: 0;
 }
 
 .remember-group {
-  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
 }
 
 .remember-label {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  color: #4b5563;
   cursor: pointer;
+  font-size: 14px;
+  color: #666;
 }
 
 .login-button {
   width: 100%;
-  padding: 1rem;
-  background: #4f46e5;
+  padding: 12px;
+  background-color: #4CAF50;
   color: white;
   border: none;
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 1rem;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
   display: flex;
-  align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
-  transition: all 0.3s ease;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.3s;
 }
 
 .login-button:hover {
-  background: #4338ca;
-  transform: translateY(-2px);
+  background-color: #45a049;
+}
+
+.login-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.error-message {
+  background-color: #ffebee;
+  color: #c62828;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.register-link {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 14px;
+  color: #666;
+}
+
+.register-link a {
+  color: #4CAF50;
+  text-decoration: none;
+}
+
+.register-link a:hover {
+  text-decoration: underline;
 }
 
 .divider {
   position: relative;
   text-align: center;
-  margin: 1.5rem 0;
+  margin: 20px 0;
 }
 
 .divider::before,
@@ -512,34 +513,9 @@ export default {
   text-decoration: underline;
 }
 
-.error-message {
-  background-color: #fef2f2;
-  color: #dc2626;
-  padding: 0.75rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-  text-align: center;
-}
-
 .loading-spinner {
   text-align: center;
   color: #4f46e5;
   margin-bottom: 1rem;
-}
-
-.login-button:disabled {
-  background: #9ca3af;
-  cursor: not-allowed;
-  transform: none;
-}
-
-@media (max-width: 640px) {
-  .login-card {
-    padding: 2rem;
-  }
-
-  .card-title {
-    font-size: 1.75rem;
-  }
 }
 </style>

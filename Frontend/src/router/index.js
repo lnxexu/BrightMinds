@@ -69,31 +69,32 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const isLoggedIn = store.state.isLoggedIn;
 
-  // Routes that require authentication
+  // Handle auth required routes
   if (to.matched.some(record => record.meta.requiresAuth)) {
     if (!isLoggedIn) {
-      next({
-        path: '/login',
-        query: { redirect: to.fullPath }
-      });
-    } else {
-      next();
+      next('/login');
+      return;
     }
   }
 
-  // Routes that require guest access (login/register)
-  else if (to.matched.some(record => record.meta.requiresGuest)) {
+  // Handle guest-only routes (login, register)
+  if (to.matched.some(record => record.meta.requiresGuest)) {
     if (isLoggedIn) {
-      next({ path: '/' });
-    } else {
-      next();
+      // Don't redirect if already going to courses
+      if (to.path !== '/courses') {
+        next('/courses');
+        return;
+      }
     }
   }
 
-  // Public routes
-  else {
-    next();
-  }
+  next();
+});
+
+// After navigation is complete
+router.afterEach(() => {
+  // Let toasts handle their own cleanup via their built-in timer
+  // No manual cleanup needed
 });
 
 export default router;
