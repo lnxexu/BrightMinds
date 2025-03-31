@@ -105,3 +105,48 @@ export const checkEmailExists = async (email) => {
     return { exists: false, error }
   }
 }
+
+// Insert a single row into a table
+export const insertRow = async (table, data) => {
+  try {
+    const { data: result, error } = await supabase
+      .from(table)
+      .insert([data])
+      .select()
+
+    if (error) throw error
+    return { data: result[0], error: null }
+  } catch (error) {
+    return { data: null, error }
+  }
+}
+
+// Insert multiple rows into a table
+export const insertRows = async (table, rows) => {
+  try {
+    const { data: result, error } = await supabase
+      .from(table)
+      .insert(rows)
+      .select()
+
+    if (error) throw error
+    return { data: result, error: null }
+  } catch (error) {
+    return { data: null, error }
+  }
+}
+
+// Insert or update (upsert) rows in a table
+export const upsertRows = async (table, rows, onConflict = 'id') => {
+  try {
+    const { data: result, error } = await supabase
+      .from(table)
+      .upsert(rows, { onConflict })
+      .select()
+
+    if (error) throw error
+    return { data: result, error: null }
+  } catch (error) {
+    return { data: null, error }
+  }
+}

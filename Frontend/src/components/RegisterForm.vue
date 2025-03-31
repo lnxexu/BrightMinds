@@ -203,57 +203,38 @@ export default {
 
     async handleRegister() {
       try {
-        this.error = null;
-
-        // Validate form
         if (!this.validateForm()) {
           return;
         }
 
-        this.isLoading = true;
+        const response = await axios.post('http://127.0.0.1:8000/users/register', {
+          full_name: this.name,
+          email: this.email,
+          password: this.password
+        });
 
-        // Make API call to register
-        const response = await axios.post('http://127.0.0.1:8000/users/register',
-          {
-            full_name: this.name,
-            email: this.email,
-            password: this.password
-          }
-        );
+        console.log('Registration successful:', response.data);
 
-        // Handle successful registration
-        this.$emit('register-success', response.data);
+        // Store user data and token in localStorage
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        localStorage.setItem('token', response.data.user.access_token);
 
-        // Show success message
-        this.$toast?.success('Registration successful! Please check your email to verify your account.');
+        // Emit success event
+        this.$emit('register-success', response.data.user);
 
-        // Redirect to login page
-        setTimeout(() => {
-          this.$router.push('/login');
-        }, 2000);
-
+        // Clear form
+        this.name = '';
+        this.email = '';
+        this.password = '';
+        this.confirmPassword = '';
 
       } catch (error) {
         console.error('Registration error:', error);
-
-        // Handle axios error responses
-        if (error.response) {
-          // Server responded with error status
-          this.error = error.response.data.detail || 'Registration failed';
-
-          // Handle specific errors
-          if (error.response.data.detail?.includes('email already exists')) {
-            this.validationErrors.email = 'This email is already registered';
-          }
-        } else if (error.request) {
-          // Request made but no response received
-          this.error = 'Unable to connect to the server';
+        if (error.response?.data?.detail) {
+          this.error = error.response.data.detail;
         } else {
-          // Other errors
-          this.error = 'An error occurred during registration';
+          this.error = 'Registration failed. Please try again.';
         }
-      } finally {
-        this.isLoading = false;
       }
     },
     async registerWithGoogle() {

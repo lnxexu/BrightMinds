@@ -6,7 +6,7 @@
         <p class="card-subtitle">Log in to continue your learning journey</p>
       </div>
 
-      <form @submit.prevent="login" class="login-form">
+      <form @submit.prevent="handleLogin" class="login-form">
         <!-- Removed old error display div since we're using Toast now -->
 
         <div class="form-group">
@@ -77,6 +77,7 @@
 </template>
 
 <script>
+import axios from 'axios';
 import { defineComponent, ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useStore } from 'vuex';
@@ -93,6 +94,7 @@ export default defineComponent({
     const rememberMe = ref(false);
     const showPassword = ref(false);
     const loading = ref(false);
+    const error = ref(null);
     
     const loadGoogleAPI = () => {
       const script = document.createElement('script');
@@ -191,39 +193,42 @@ export default defineComponent({
       }
     };
 
-    const login = async () => {
+    const handleLogin = async () => {
       try {
-        // Reset states
+        // Reset error state
+        error.value = null;
         loading.value = true;
 
         // Basic validation
         if (!email.value || !password.value) {
-          // Removed local toast handling
+          error.value = 'Please fill in all fields';
           return;
         }
 
         // Email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email.value)) {
-          // Removed local toast handling
+          error.value = 'Please enter a valid email address';
           return;
         }
 
-        // Make API call to backend
-        const response = await fetch(`http://127.0.0.1:8000/login/${encodeURIComponent(email.value)}/${encodeURIComponent(password.value)}`);
-        
-        const data = await response.json();
-        
-        if (!response.ok) {
-          throw new Error(data.detail || "Invalid email or password");
-        }
+        const response = await axios.post('http://127.0.0.1:8000/login', {
+          email: email.value,
+          password: password.value
+        });
+
+        console.log('Login successful:', response.data);
 
         // Get user's full name and split to get first name
-        const fullName = data.user.full_name || '';
+        const fullName = response.data.user.full_name || '';
         const firstName = fullName.split(' ')[0];
 
-        // Update Vuex store with user data including first name
-        store.commit('setUser', { ...data.user, firstName });
+        // Store user data and token in localStorage
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        localStorage.setItem('token', response.data.user.access_token);
+
+        // Update Vuex store
+        store.commit('setUser', { ...response.data.user, firstName });
         store.commit('setLoggedIn', true);
 
         // Store email if remember me is checked
@@ -233,12 +238,21 @@ export default defineComponent({
           localStorage.removeItem('email');
         }
 
+        // Clear form
+        email.value = '';
+        password.value = '';
+        rememberMe.value = false;
+
         // Navigate to courses page
         router.push('/courses');
 
-      } catch (err) {
-        // Removed local toast handling
-        console.error('Login error:', err);
+      } catch (error) {
+        console.error('Login error:', error);
+        if (error.response?.data?.detail) {
+          error.value = error.response.data.detail;
+        } else {
+          error.value = 'Login failed. Please check your credentials and try again.';
+        }
       } finally {
         loading.value = false;
       }
@@ -260,7 +274,8 @@ export default defineComponent({
       showPassword,
       loading,
       rememberMe,
-      login,
+      error,
+      handleLogin,
       loginWithGoogle,
       loginWithFacebook
     };
@@ -311,26 +326,46 @@ export default defineComponent({
   position: relative;
   display: flex;
   align-items: center;
+  background-color: #fff;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  padding: 0 12px;
+  transition: border-color 0.3s ease;
 }
 
 .input-wrapper i {
-  position: absolute;
-  left: 12px;
   color: #666;
+  margin-right: 10px;
 }
 
-input {
-  width: 100%;
-  padding: 12px 12px 12px 40px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+.input-wrapper input {
+  flex: 1;
+  border: none;
+  padding: 12px 0;
   font-size: 14px;
-  transition: border-color 0.3s;
+  background: transparent;
+  outline: none;
 }
 
-input:focus {
-  outline: none;
-  border-color: #4CAF50;
+.toggle-password {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  transition: color 0.3s ease;
+}
+
+.toggle-password:hover {
+  color: #4a90e2;
+}
+
+.toggle-password i {
+  margin: 0;
+  font-size: 16px;
 }
 
 .password-label {
@@ -350,27 +385,66 @@ input:focus {
   text-decoration: underline;
 }
 
-.toggle-password {
-  position: absolute;
-  right: 12px;
-  background: none;
-  border: none;
-  color: #666;
-  cursor: pointer;
-}
-
 .remember-group {
   display: flex;
   align-items: center;
-  margin-bottom: 20px;
+  margin: 16px 0;
 }
 
 .remember-label {
   display: flex;
   align-items: center;
+  position: relative;
+  padding-left: 28px;
   cursor: pointer;
   font-size: 14px;
   color: #666;
+  user-select: none;
+}
+
+.remember-label input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.checkmark {
+  position: absolute;
+  left: 0;
+  height: 18px;
+  width: 18px;
+  background-color: #fff;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.remember-label:hover input ~ .checkmark {
+  border-color: #4a90e2;
+}
+
+.remember-label input:checked ~ .checkmark {
+  background-color: #4a90e2;
+  border-color: #4a90e2;
+}
+
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+  left: 5px;
+  top: 2px;
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.remember-label input:checked ~ .checkmark:after {
+  display: block;
 }
 
 .login-button {

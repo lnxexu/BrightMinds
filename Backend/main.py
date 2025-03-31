@@ -1,12 +1,12 @@
+from datetime import datetime
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.events import startup
+from pydantic import BaseModel
 import os
 from supabase import create_client, Client
 from dotenv import load_dotenv
-from datetime import datetime
-from pydantic import BaseModel
-from typing import Optional
-from passlib.hash import bcrypt
+import bcrypt
 
 # Load environment variables
 load_dotenv()
@@ -16,6 +16,13 @@ app = FastAPI(title="BrightMinds API")
 # Supabase client setup
 supabase_url = "https://hupwxuuqqwvaoswnhtmi.supabase.co"
 supabase_key = os.getenv("SUPABASE_KEY")
+
+if not supabase_key:
+    raise ValueError("SUPABASE_KEY environment variable is not set")
+
+print("Supabase URL:", supabase_url)  # Debug log
+print("Supabase key length:", len(supabase_key) if supabase_key else 0)  # Debug log without exposing the key
+
 supabase: Client = create_client(supabase_url, supabase_key)
 
 # CORS middleware
@@ -33,33 +40,127 @@ class UserResponse(BaseModel):
     full_name: str
     email: str
     created_at: datetime
+    access_token: str
+
+class UserRegister(BaseModel):
+    full_name: str
+    email: str
+    password: str
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
 
 @app.get("/")
 async def root():
     return {"message": "Welcome to BrightMinds API"}
 
-@app.get("/login/{email}/{password}", tags=["auth"])
-async def login(email: str, password: str):
+@app.post("/users/register", tags=["auth"])
+async def register_user(user: UserRegister):
     try:
-        # Get user by email and password directly
-        response = supabase.table('users').select("*").eq('email', email).eq('password_hash', password).execute()
+        # First, create the auth user using Supabase Auth
+        auth_response = supabase.auth.sign_up({
+            "email": user.email,
+            "password": user.password,
+            "options": {
+                "data": {
+                    "full_name": user.full_name
+                }
+            }
+        })
         
-        # Check if any user was found
+        print("Auth response:", auth_response)  # Debug log
+
+        if not auth_response.user:
+            raise HTTPException(status_code=400, detail="Failed to create user account")
+
+        # Get the next available user_id
+        max_id_response = supabase.table('users').select("user_id").order('user_id', desc=True).limit(1).execute()
+        next_user_id = 1
+        if max_id_response.data and len(max_id_response.data) > 0:
+            next_user_id = max_id_response.data[0]['user_id'] + 1
+
+        # Hash the password
+        salt = bcrypt.gensalt()
+        hashed_password = bcrypt.hashpw(user.password.encode('utf-8'), salt)
+
+        # Create user in our users table
+        new_user_data = {
+            "user_id": next_user_id,
+            "full_name": user.full_name,
+            "email": user.email,
+            "created_at": datetime.utcnow().isoformat(),
+            "password": hashed_password.decode('utf-8')  # Store as string
+        }
+
+        # Insert into public.users table
+        response = supabase.table('users').insert(new_user_data).execute()
+        print("Users table response:", response)  # Debug log
+
+        # Sign in to get the access token
+        auth_signin = supabase.auth.sign_in_with_password({
+            "email": user.email,
+            "password": user.password
+        })
+
+        if not auth_signin.session:
+            raise HTTPException(status_code=500, detail="Failed to get access token")
+
+        return {
+            "message": "Registration successful",
+            "user": {
+                "user_id": next_user_id,
+                "full_name": user.full_name,
+                "email": user.email,
+                "created_at": new_user_data['created_at'],
+                "access_token": auth_signin.session.access_token
+            }
+        }
+
+    except Exception as e:
+        print("Registration error:", str(e))
+        if isinstance(e, HTTPException):
+            raise e
+        if "User already registered" in str(e):
+            raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}")
+
+@app.post("/login", tags=["auth"])
+async def login(user: UserLogin):
+    try:
+        # Use Supabase Auth for login
+        auth_response = supabase.auth.sign_in_with_password({
+            "email": user.email,
+            "password": user.password
+        })
+
+        if not auth_response.user:
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+
+        # Get user details from public.users table using email
+        response = supabase.table('users').select("*").eq('email', user.email).execute()
+        
         if not response.data or len(response.data) == 0:
+            raise HTTPException(status_code=404, detail="User data not found")
+        
+        user_data = response.data[0]
+        
+        # Verify password
+        stored_password = user_data['password'].encode('utf-8')
+        if not bcrypt.checkpw(user.password.encode('utf-8'), stored_password):
             raise HTTPException(status_code=401, detail="Invalid email or password")
         
-        user = response.data[0]  # Get the first user since email should be unique
-        
-        # Return user data without password
         return {
             "user": {
-                "user_id": user['user_id'],
-                "full_name": user['full_name'],
-                "email": user['email'],
-                "created_at": user['created_at']
+                "user_id": user_data['user_id'],
+                "full_name": user_data['full_name'],
+                "email": user_data['email'],
+                "created_at": user_data['created_at'],
+                "access_token": auth_response.session.access_token
             }
         }
     except Exception as e:
+        print("Login error:", str(e))
         if isinstance(e, HTTPException):
             raise e
         raise HTTPException(status_code=401, detail="Invalid email or password")
@@ -67,24 +168,13 @@ async def login(email: str, password: str):
 @app.get("/users/{user_id}", tags=["users"])
 async def get_user(user_id: int):
     try:
-        response = supabase.table('users').select("""
-            user_id,
-            full_name,
-            email,
-            created_at,
-            socialaccounts (
-                provider,
-                unique_id
-            )
-        """).eq('user_id', user_id).single().execute()
+        response = supabase.table('users').select("*").eq('user_id', user_id).execute()
         
-        if not response.data:
+        if not response.data or len(response.data) == 0:
             raise HTTPException(status_code=404, detail="User not found")
-            
-        return {"user": response.data}
+        
+        return {"user": response.data[0]}
     except Exception as e:
-        if isinstance(e, HTTPException):
-            raise e
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/courses", tags=["courses"])
@@ -147,6 +237,42 @@ async def insert_sample_data():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# Initialize database schema
+async def init_database():
+    try:
+        # Try to insert a user without password_hash to test if constraint exists
+        test_response = supabase.table('users').insert({
+            "user_id": 999999,  # Using a high number for test
+            "full_name": "Test User",
+            "email": "test@example.com",
+            "created_at": datetime.utcnow().isoformat()
+        }).execute()
+        print("Schema is already updated")
+    except Exception as e:
+        if "password_hash" in str(e):
+            print("Need to update schema - removing password_hash constraint")
+            try:
+                # Use raw SQL through RPC to alter the table
+                result = supabase.rpc(
+                    'exec_sql',
+                    {
+                        'sql_query': """
+                        ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
+                        """
+                    }
+                ).execute()
+                print("Schema updated successfully")
+            except Exception as e:
+                print("Error updating schema:", str(e))
+                raise e
+        else:
+            print("Unexpected error:", str(e))
+
+# Call init_database on startup
+@app.on_event("startup")
+async def startup_event():
+    await init_database()
 
 if __name__ == "__main__":
     import uvicorn

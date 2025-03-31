@@ -34,9 +34,11 @@ export default createStore({
   },
   mutations: {
     setUser(state, user) {
-      // Ensure first name is extracted from full name if not already set
-      if (!user.firstName && user.full_name) {
-        user.firstName = user.full_name.split(' ')[0];
+      if (user) {
+        // Ensure first name is extracted from full name if not already set
+        if (!user.firstName && user.full_name) {
+          user.firstName = user.full_name.split(' ')[0];
+        }
       }
       state.currentUser = user;
     },

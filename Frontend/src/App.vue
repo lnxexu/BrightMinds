@@ -162,10 +162,10 @@ export default {
 
     // Listen for global events
     store.subscribe((mutation, state) => {
-      if (mutation.type === 'setLoggedIn') {
-        if (state.isLoggedIn) {
-          showGlobalToast('Login successful!', 'success');
-        }
+      if (mutation.type === 'setLoggedIn' && state.isLoggedIn) {
+        showGlobalToast('Login successful!', 'success');
+      } else if (mutation.type === 'setError' && state.error) {
+        showGlobalToast(state.error, 'error');
       }
     });
 
