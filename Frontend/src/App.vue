@@ -1,11 +1,13 @@
 <template>
   <div id="app" class="min-h-screen flex flex-col bg-gradient">
     <!-- Global Toast that persists across navigation -->
-    <Toast v-if="showToast" 
-           :message="toastMessage" 
-           :type="toastType" 
-           @close="showToast = false" />
-           
+    <Toast
+      v-if="showToast"
+      :message="toastMessage"
+      :type="toastType"
+      @close="showToast = false"
+    />
+
     <header class="header">
       <div class="navbar">
         <!-- Logo - Always Visible -->
@@ -15,7 +17,7 @@
             <span>Bright <span class="text-gradient">Minds</span></span>
           </router-link>
         </div>
-        
+
         <!-- Navigation Links - Only Visible When Logged In -->
         <nav v-if="isLoggedIn" class="nav-links">
           <router-link to="/courses" class="nav-link">
@@ -50,22 +52,50 @@
           </template>
           <template v-else>
             <!-- User Profile Dropdown -->
-            <div class="user-profile" @click="toggleProfileMenu">
-              <img :src="userAvatar" alt="User Avatar" class="avatar" />
-              <span class="username">{{ username }}</span>
-              <i class="fas fa-chevron-down"></i>
-              
+            <div class="user-profile">
+              <button
+                @click="toggleProfileMenu"
+                @keydown.escape="showProfileMenu = false"
+                class="profile-button"
+                aria-haspopup="true"
+                :aria-expanded="showProfileMenu"
+              >
+                <img :src="userAvatar" alt="User Avatar" class="avatar" />
+                <span class="username">{{ username }}</span>
+                <i class="fas fa-chevron-down"></i>
+              </button>
+
               <!-- Dropdown Menu -->
-              <div v-if="showProfileMenu" class="profile-dropdown">
-                <router-link to="/profile" class="dropdown-item">
+              <div
+                v-if="showProfileMenu"
+                class="profile-dropdown"
+                role="menu"
+                @keydown.escape="showProfileMenu = false"
+              >
+                <router-link
+                  to="/profile"
+                  class="dropdown-item"
+                  role="menuitem"
+                  @keydown.esc="showProfileMenu = false"
+                >
                   <i class="fas fa-user"></i>
                   My Profile
                 </router-link>
-                <router-link to="/settings" class="dropdown-item">
+                <router-link
+                  to="/settings"
+                  class="dropdown-item"
+                  role="menuitem"
+                  @keydown.esc="showProfileMenu = false"
+                >
                   <i class="fas fa-cog"></i>
                   Settings
                 </router-link>
-                <button @click.stop="logout" class="dropdown-item logout">
+                <button
+                  @click="logout"
+                  class="dropdown-item logout"
+                  role="menuitem"
+                  @keydown.esc="showProfileMenu = false"
+                >
                   <i class="fas fa-sign-out-alt"></i>
                   Logout
                 </button>
@@ -88,7 +118,9 @@
 
     <footer class="footer">
       <div class="footer-content">
-        <p class="copyright"> 2025 Bright Minds Elementary School. All Rights Reserved.</p>
+        <p class="copyright">
+          2025 Bright Minds Elementary School. All Rights Reserved.
+        </p>
         <div class="social-links">
           <a href="#" class="social-link">
             <i class="fab fa-facebook-f"></i>
@@ -105,117 +137,106 @@
   </div>
 </template>
 
-<script>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { useStore } from 'vuex';
-import { mapState } from 'vuex';
-import { useRouter } from 'vue-router';
-import Toast from './components/Toast.vue';
+<script setup>
+import { ref, computed, onMounted, onUnmounted } from "vue";
+import { useStore } from "vuex";
+import { useRouter, useRoute } from "vue-router";
+import { supabase } from "./lib/supabaseClient.js";
+import Toast from "./components/Toast.vue";
 
-export default {
-  name: 'App',
-  components: {
-    Toast
-  },
-  setup() {
-    const store = useStore();
-    const router = useRouter();
-    const showProfileMenu = ref(false);
-    const showToast = ref(false);
-    const toastMessage = ref('');
-    const toastType = ref('info');
-    const userAvatar = ref('/default-avatar.png');
+const store = useStore();
+const router = useRouter();
+const route = useRoute();
 
-    // Get first name from store
-    const username = computed(() => {
-      const user = store.state.currentUser;
-      return user?.firstName || 'User';
-    });
+const showProfileMenu = ref(false);
+const showToast = ref(false);
+const toastMessage = ref("");
+const toastType = ref("info");
+const userAvatar = ref("/default-avatar.png");
 
-    // Toggle profile menu
-    const toggleProfileMenu = () => {
-      showProfileMenu.value = !showProfileMenu.value;
-    };
+// Get first name from supaba
+const username = computed(() => {
+  const user = store.state.currentUser;
+  return user?.firstName || "User";
+});
 
-    // Handle click outside to close menu
-    const handleClickOutside = (event) => {
-      if (showProfileMenu.value && !event.target.closest('.user-profile')) {
-        showProfileMenu.value = false;
-      }
-    };
+// Compute login state
+const isLoggedIn = computed(() => store.state.isLoggedIn);
 
-    // Add click outside listener
-    onMounted(() => {
-      document.addEventListener('click', handleClickOutside);
-    });
+// Toggle profile menu
+const toggleProfileMenu = () => {
+  showProfileMenu.value = !showProfileMenu.value;
+};
 
-    onUnmounted(() => {
-      document.removeEventListener('click', handleClickOutside);
-    });
+// Handle click outside to close menu
+const handleClickOutside = (event) => {
+  const profileEl = event.target.closest('.user-profile');
+  if (showProfileMenu.value && !profileEl) {
+    showProfileMenu.value = false;
+  }
+};
 
-    // Global toast handler
-    const showGlobalToast = (message, type = 'success') => {
-      toastMessage.value = message;
-      toastType.value = type;
-      showToast.value = true;
-    };
+const handleKeyDown = (event) => {
+  if (event.key === 'Escape' && showProfileMenu.value) {
+    showProfileMenu.value = false;
+  }
+};
 
-    // Listen for global events
-    store.subscribe((mutation, state) => {
-      if (mutation.type === 'setLoggedIn' && state.isLoggedIn) {
-        showGlobalToast('Login successful!', 'success');
-      } else if (mutation.type === 'setError' && state.error) {
-        showGlobalToast(state.error, 'error');
-      }
-    });
+// Add click outside listener
+onMounted(() => {
+  document.addEventListener("click", handleClickOutside);
+  document.addEventListener('keydown', handleKeyDown);
 
-    // Logout handler
-    const logout = async () => {
-      try {
-        await store.dispatch('logout');
-        showGlobalToast('Successfully logged out');
-        showProfileMenu.value = false;
-        router.push('/login');
-      } catch (error) {
-        console.error('Logout error:', error);
-      }
-    };
+  // Check auth state when app loads
+  store.dispatch("checkAuthState").then(() => {
+    // If user is on a protected route and not logged in, redirect to login
+    if (route.meta.requiresAuth && !isLoggedIn.value) {
+      router.push("/login");
+    }
+    // If user is on a guest route and logged in, redirect to home
+    else if (route.meta.requiresGuest && isLoggedIn.value) {
+      router.push("/");
+    }
+  });
+});
 
-    return {
-      showProfileMenu,
-      showToast,
-      toastMessage,
-      toastType,
-      userAvatar,
-      username,
-      showGlobalToast,
-      toggleProfileMenu,
-      logout
-    };
-  },
-  computed: {
-    ...mapState({
-      isLoggedIn: state => state.isLoggedIn
-    })
-  },
-  created() {
-    // Check auth state when app loads
-    this.$store.dispatch('checkAuthState').then(() => {
-      // If user is on a protected route and not logged in, redirect to login
-      if (this.$route.meta.requiresAuth && !this.isLoggedIn) {
-        this.$router.push('/login');
-      }
-      // If user is on a guest route and logged in, redirect to home
-      else if (this.$route.meta.requiresGuest && this.isLoggedIn) {
-        this.$router.push('/');
-      }
-    });
+onUnmounted(() => {
+  document.removeEventListener("click", handleClickOutside);
+  document.removeEventListener('keydown', handleKeyDown);
+});
+
+// Global toast handler
+const showGlobalToast = (message, type = "success") => {
+  toastMessage.value = message;
+  toastType.value = type;
+  showToast.value = true;
+};
+
+// Listen for global events
+store.subscribe((mutation, state) => {
+  if (mutation.type === "setLoggedIn" && state.isLoggedIn) {
+    showGlobalToast("Login successful!", "success");
+  } else if (mutation.type === "setError" && state.error) {
+    showGlobalToast(state.error, "error");
+  }
+});
+
+// Logout handler
+const logout = async () => {
+  try {
+    await store.dispatch("logout");
+    showGlobalToast("Successfully logged out");
+    showProfileMenu.value = false;
+    router.push("/login");
+  } catch (error) {
+    console.error("Logout error:", error);
   }
 };
 </script>
+
 <style>
 /* Modern color variables */
-:root {
+* {
   --primary: #4f46e5;
   --primary-light: #818cf8;
   --primary-dark: #4338ca;
@@ -227,7 +248,7 @@ export default {
 
 /* Global styles */
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   margin: 0;
   padding: 0;
@@ -245,6 +266,24 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
+}
+
+.profile-button {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.profile-button:hover,
+.profile-button:focus {
+  background: rgba(79, 70, 229, 0.08);
+  outline: none;
 }
 
 .navbar {
@@ -274,7 +313,11 @@ body {
 }
 
 .text-gradient {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--primary) 0%,
+    var(--primary-light) 100%
+  );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -437,7 +480,7 @@ body {
   .username {
     display: none;
   }
-  
+
   .user-profile {
     padding: 0.5rem;
   }

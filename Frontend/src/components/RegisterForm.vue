@@ -137,133 +137,144 @@
   </div>
 </template>
 
-<script>
-import axios from 'axios';
+<script setup>
+import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { supabase } from '../lib/supabaseClient.js'; 
+import { useToast } from 'vue-toastification'; 
+// Reactive state
+const toast = useToast();
+const name = ref("");
+const email = ref("");
+const password = ref("");
+const confirmPassword = ref("");
+const isLoading = ref(false);
+const showPassword = ref(false);
+const showConfirmPassword = ref(false);
+const error = ref(null);
+const validationErrors = ref({
+  name: null,
+  email: null,
+  password: null
+});
 
-export default {
-  name: "RegisterForm",
-  data() {
-    return {
-      name: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-      isLoading: false,
-      showPassword: false,
-      showConfirmPassword: false,
-      error: null,
-      validationErrors: {
-        name: null,
-        email: null,
-        password: null
-      }
-    };
-  },
-  computed: {
-    passwordMismatch() {
-      return this.password !== this.confirmPassword && this.confirmPassword.length > 0;
-    },
-  },
-  methods: {
-    validateForm() {
-      let isValid = true;
-      this.validationErrors = {
-        name: null,
-        email: null,
-        password: null
-      };
+// Computed properties
+const passwordMismatch = computed(() => {
+  return password.value !== confirmPassword.value && confirmPassword.value.length > 0;
+});
 
-      // Name validation
-      if (this.name.trim().length < 2) {
-        this.validationErrors.name = "Name must be at least 2 characters long";
-        isValid = false;
-      }
+// Methods
+const validateForm = () => {
+  let isValid = true;
+  validationErrors.value = {
+    name: null,
+    email: null,
+    password: null
+  };
 
-      // Email validation
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(this.email)) {
-        this.validationErrors.email = "Please enter a valid email address";
-        isValid = false;
-      }
+  // Name validation
+  if (name.value.trim().length < 2) {
+    validationErrors.value.name = "Name must be at least 2 characters long";
+    isValid = false;
+  }
 
-      // Password validation
-      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-      if (!passwordRegex.test(this.password)) {
-        this.validationErrors.password = "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character";
-        isValid = false;
-      }
+  // Email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email.value)) {
+    validationErrors.value.email = "Please enter a valid email address";
+    isValid = false;
+  }
 
-      // Confirm password validation
-      if (this.passwordMismatch) {
-        isValid = false;
-      }
+  // Password validation
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  if (!passwordRegex.test(password.value)) {
+    validationErrors.value.password = "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character";
+    isValid = false;
+  }
 
-      return isValid;
-    },
+  // Confirm password validation
+  if (passwordMismatch.value) {
+    isValid = false;
+  }
 
-    async handleRegister() {
-      try {
-        if (!this.validateForm()) {
-          return;
-        }
+  return isValid;
+};
 
-        const response = await axios.post('http://127.0.0.1:8000/users/register', {
-          full_name: this.name,
-          email: this.email,
-          password: this.password
-        });
+const handleRegister = async () => {
+  if (!validateForm()) {
+    return;
+  }
 
-        console.log('Registration successful:', response.data);
-
-        // Store user data and token in localStorage
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        localStorage.setItem('token', response.data.user.access_token);
-
-        // Emit success event
-        this.$emit('register-success', response.data.user);
-
-        // Clear form
-        this.name = '';
-        this.email = '';
-        this.password = '';
-        this.confirmPassword = '';
-
-      } catch (error) {
-        console.error('Registration error:', error);
-        if (error.response?.data?.detail) {
-          this.error = error.response.data.detail;
-        } else {
-          this.error = 'Registration failed. Please try again.';
+  try {
+    isLoading.value = true;
+    const { user, error: signUpError } = await supabase.auth.signUp({
+      email: email.value,
+      password: password.value,
+      options: {
+        data: {
+          full_name: name.value
         }
       }
-    },
-    async registerWithGoogle() {
-      try {
-        this.isLoading = true;
-        // Implement Google OAuth registration
-        console.log('Google registration not implemented');
-      } catch (error) {
-        console.error('Google registration error:', error);
-        this.error = 'Failed to register with Google';
-      } finally {
-        this.isLoading = false;
-      }
-    },
+    });
 
-    async registerWithFacebook() {
-      try {
-        this.isLoading = true;
-        // Implement Facebook OAuth registration
-        console.log('Facebook registration not implemented');
-      } catch (error) {
-        console.error('Facebook registration error:', error);
-        this.error = 'Failed to register with Facebook';
-      } finally {
-        this.isLoading = false;
-      }
+    if (signUpError) {
+       toast.error(signUpError.message, {
+        position: 'top-right',
+        timeout: 5000,
+      });
     }
+
+    // Handle successful registration (e.g., redirect to login page or show success message)
+    toast.success('Registration successful! Please check your email for confirmation.', {
+      position: 'top-right',
+      timeout: 5000,
+    });
+
+    // goes to the login page after successful registration
+    router.push('/login');
+  } catch (err) {
+    toast.error('An error occurred during registration. Please try again.', {
+      position: 'top-right',
+      timeout: 5000,
+    });
+    console.log(email.value, password.value, name.value);
+    error.value = 'Failed to register. Please try again.';
+  } finally {
+    isLoading.value = false;
+  }
+
+
+};
+
+const registerWithGoogle = async () => {
+  try {
+    isLoading.value = true;
+    // Implement Google OAuth registration
+    console.log('Google registration not implemented');
+  } catch (err) {
+    console.error('Google registration error:', err);
+    error.value = 'Failed to register with Google';
+  } finally {
+    isLoading.value = false;
   }
 };
+
+const registerWithFacebook = async () => {
+  try {
+    isLoading.value = true;
+    // Implement Facebook OAuth registration
+    console.log('Facebook registration not implemented');
+  } catch (err) {
+    console.error('Facebook registration error:', err);
+    error.value = 'Failed to register with Facebook';
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+// Define emits
+const emit = defineEmits(['register-success']);
+
 </script>
 
 <style scoped>

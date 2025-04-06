@@ -94,50 +94,35 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from "vue";
 
-export default {
-  name: "QuizCreator",
-  setup() {
-    const newQuestion = ref("");
-    const questions = ref([]);
-    const questionType = ref("multiple");
-    const options = ref(["", "", "", ""]);
+const newQuestion = ref("");
+const questions = ref([]);
+const questionType = ref("multiple");
+const options = ref(["", "", "", ""]);
 
-    const addQuestion = () => {
-      if (newQuestion.value.trim()) {
-        questions.value.push(newQuestion.value.trim());
-        newQuestion.value = "";
-        options.value = ["", "", "", ""];
-      }
-    };
-
-    const addOption = () => {
-      options.value.push("");
-    };
-
-    const deleteQuestion = (index) => {
-      questions.value.splice(index, 1);
-    };
-
-    const editQuestion = (index) => {
-      newQuestion.value = questions.value[index];
-      questions.value.splice(index, 1);
-    };
-
-    return { 
-      newQuestion, 
-      questions, 
-      questionType,
-      options,
-      addQuestion,
-      addOption,
-      deleteQuestion,
-      editQuestion
-    };
-  },
+const addQuestion = () => {
+  if (newQuestion.value.trim()) {
+    questions.value.push(newQuestion.value.trim());
+    newQuestion.value = "";
+    options.value = ["", "", "", ""];
+  }
 };
+
+const addOption = () => {
+  options.value.push("");
+};
+
+const deleteQuestion = (index) => {
+  questions.value.splice(index, 1);
+};
+
+const editQuestion = (index) => {
+  newQuestion.value = questions.value[index];
+  questions.value.splice(index, 1);
+};
+
 </script>
 
 <style scoped>

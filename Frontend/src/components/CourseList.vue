@@ -1,12 +1,23 @@
 <template>
   <div class="course-list">
-    <div class="section-header">
-      <h2 class="section-title">Available <span class="title-accent">Courses</span></h2>
-      <p class="section-description">Explore our interactive learning programs designed for young minds</p>
+    <div class="section-header animate-fade-in">
+      <h2 class="section-title">
+        Available <span class="title-accent">Courses</span>
+      </h2>
+      <p class="section-description">
+        Explore our interactive learning programs designed for young minds
+      </p>
     </div>
 
-    <div class="course-grid">
-      <div v-for="course in courses" :key="course.id" class="course-card">
+    <TransitionGroup 
+      name="course-list"
+      tag="div"
+      class="course-grid"
+    >
+      <div v-for="(course, index) in courses" 
+           :key="course.course_id" 
+           class="course-card"
+           :style="{ animationDelay: `${index * 100}ms` }">
         <div class="card-icon">
           <i :class="course.icon"></i>
         </div>
@@ -20,52 +31,55 @@
             </div>
             <div class="stat">
               <i class="fas fa-users"></i>
-              <span>{{ course.students }}+ Students</span>
+              <span>{{ course.student_count }}+ Students</span>
             </div>
           </div>
-          <button class="card-button">
-            View Course
-            <i class="fas fa-arrow-right"></i>
+          <button class="card-button" @click="navigateToCourse(course.course_id)">
+            <i class="fas fa-arrow-right"></i> View Course
           </button>
         </div>
       </div>
-    </div>
+    </TransitionGroup>
   </div>
 </template>
 
-<script>
-export default {
-  name: 'CourseList',
-  setup() {
-    const courses = [
-      {
-        id: 1,
-        name: "Math Basics",
-        description: "Master fundamental mathematics through interactive lessons and fun problem-solving activities.",
-        icon: "fas fa-square-root-alt",
-        duration: "8 weeks",
-        students: 125
-      },
-      {
-        id: 2,
-        name: "Science Explorations",
-        description: "Discover the wonders of science through hands-on experiments and engaging virtual labs.",
-        icon: "fas fa-flask",
-        duration: "10 weeks",
-        students: 98
-      },
-      {
-        id: 3,
-        name: "English Literacy",
-        description: "Develop strong reading and writing skills with our comprehensive English program.",
-        icon: "fas fa-book-reader",
-        duration: "12 weeks",
-        students: 156
-      }
-    ];
-    return { courses };
-  },
+<script setup>
+import { ref, onMounted } from "vue";
+import { supabase } from "../lib/supabaseClient";
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
+const courses = ref([]);
+
+const navigateToCourse = (course_id) => {
+  if (course_id) {
+    router.push({
+      name: "CourseDetails",
+      params: { course_id: course_id.toString() }, // Match the route parameter name
+    });
+  }
 };
+
+const fetchCourses = async () => {
+  try {
+    const { data, error } = await supabase.from("courses").select("*")
+    //arrange by course_id in descending order
+    .order("course_id", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching courses:", error);
+      return;
+    }
+
+    courses.value = data;
+  } catch (error) {
+    console.error("Error:", error);
+  }
+};
+
+onMounted(() => {
+  fetchCourses();
+});
 </script>
 
 <style scoped>
@@ -106,6 +120,56 @@ export default {
   padding: 1rem;
 }
 
+/* Animation for header */
+.animate-fade-in {
+  animation: fadeIn 0.8s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Transition group animations */
+.course-list-move,
+.course-list-enter-active,
+.course-list-leave-active {
+  transition: all 0.5s ease;
+}
+
+.course-list-enter-from,
+.course-list-leave-to {
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+.course-list-leave-active {
+  position: absolute;
+}
+
+/* Card animation on mount */
+.course-card {
+  animation: slideIn 0.6s ease-out forwards;
+  opacity: 0;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .course-card {
   background: white;
   border-radius: 24px;
@@ -119,11 +183,17 @@ export default {
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
 }
 
+/* Enhanced hover animations */
+.course-card:hover .card-icon {
+  transform: scale(1.05);
+}
+
 .card-icon {
   background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
   color: white;
   padding: 2rem;
   text-align: center;
+  transition: transform 0.3s ease-in-out;
 }
 
 .card-icon i {
@@ -132,6 +202,11 @@ export default {
 
 .card-content {
   padding: 2rem;
+  transition: transform 0.3s ease-in-out;
+}
+
+.course-card:hover .card-content {
+  transform: translateY(-5px);
 }
 
 .card-title {

@@ -1,14 +1,16 @@
 import { createRouter, createWebHistory } from "vue-router";
 import Home from "@/views/Home.vue";
 import CourseList from "@/components/CourseList.vue";
+import CourseDetails from "@/components/CourseDetails.vue";
 import MessagingComponent from "@/components/Messaging.vue";
 import QuizCreator from "@/components/QuizCreator.vue";
-import ParentDashboard from "@/views/ParentDashboard.vue";
+import ParentDashboard from "@/components/ParentDashboard.vue";
 import LoginForm from "@/components/LoginForm.vue";
 import RegisterForm from "@/components/RegisterForm.vue";
 import ProfileView from '@/components/ProfileView.vue';
 import SettingsView from '@/components/SettingsView.vue';
 import store from '@/store';
+
 
 const routes = [
   { 
@@ -20,6 +22,13 @@ const routes = [
     path: "/courses", 
     component: CourseList,
     meta: { requiresAuth: true }
+  },
+  { 
+    path: "/courses/:course_id", 
+    name: 'CourseDetails',
+    component: CourseDetails,
+    meta: { requiresAuth: true },
+    props: true
   },
   { 
     path: "/messages", 

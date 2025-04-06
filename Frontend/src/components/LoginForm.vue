@@ -7,7 +7,6 @@
       </div>
 
       <form @submit.prevent="handleLogin" class="login-form">
-        <!-- Removed old error display div since we're using Toast now -->
 
         <div class="form-group">
           <label for="email">Email</label>
@@ -76,211 +75,155 @@
   </div>
 </template>
 
-<script>
-import axios from 'axios';
-import { defineComponent, ref, onMounted } from 'vue';
+<script setup>
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useStore } from 'vuex';
+import { supabase } from '../lib/supabaseClient.js'
+import { useToast } from 'vue-toastification';
 
-export default defineComponent({
-  name: 'LoginForm',
-  setup() {
-    const router = useRouter();
-    const store = useStore();
-    
-    // Form data
-    const email = ref('');
-    const password = ref('');
-    const rememberMe = ref(false);
-    const showPassword = ref(false);
-    const loading = ref(false);
-    const error = ref(null);
-    
-    const loadGoogleAPI = () => {
-      const script = document.createElement('script');
-      script.src = 'https://accounts.google.com/gsi/client';
-      script.async = true;
-      script.defer = true;
-      document.head.appendChild(script);
-    };
+const router = useRouter();
+const store = useStore();
+const toast = useToast();
 
-    const initFacebookSDK = () => {
-      window.fbAsyncInit = function() {
-        FB.init({
-          appId: 'YOUR_FACEBOOK_APP_ID', // Replace with your Facebook App ID
-          cookie: true,
-          xfbml: true,
-          version: 'v12.0'
-        });
-      };
+// Form data
+const email = ref('');
+const password = ref('');
+const rememberMe = ref(false);
+const showPassword = ref(false);
+const loading = ref(false);
+const error = ref(null);
 
-      // Load Facebook SDK
-      (function(d, s, id) {
-        var js, fjs = d.getElementsByTagName(s)[0];
-        if (d.getElementById(id)) return;
-        js = d.createElement(s); js.id = id;
-        js.src = "https://connect.facebook.net/en_US/sdk.js";
-        fjs.parentNode.insertBefore(js, fjs);
-      }(document, 'script', 'facebook-jssdk'));
-    };
+const loadGoogleAPI = () => {
+  const script = document.createElement('script');
+  script.src = 'https://accounts.google.com/gsi/client';
+  script.async = true;
+  script.defer = true;
+  document.head.appendChild(script);
+};
 
-    const loginWithGoogle = async () => {
-      try {
-        const client = google.accounts.oauth2.initTokenClient({
-          client_id: 'YOUR_GOOGLE_CLIENT_ID', // Replace with your Google Client ID
-          scope: 'email profile',
-          callback: async (response) => {
-            if (response.access_token) {
-              const result = await fetch('http://127.0.0.1:8000/oauth/auth/google', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  access_token: response.access_token,
-                  provider: 'google'
-                })
-              });
+const initFacebookSDK = () => {
+  window.fbAsyncInit = function() {
+    FB.init({
+      appId: 'YOUR_FACEBOOK_APP_ID', // Replace with your Facebook App ID
+      cookie: true,
+      xfbml: true,
+      version: 'v12.0'
+    });
+  };
 
-              const data = await result.json();
-              if (data.success) {
-                store.commit('setUser', data.user);
-                store.commit('setLoggedIn', true);
-                router.push('/courses');
-              } else {
-                // Removed local toast handling
-              }
-            }
-          },
-        });
-        client.requestAccessToken();
-      } catch (err) {
-        // Removed local toast handling
-        console.error(err);
-      }
-    };
+  // Load Facebook SDK
+  (function(d, s, id) {
+    var js, fjs = d.getElementsByTagName(s)[0];
+    if (d.getElementById(id)) return;
+    js = d.createElement(s); js.id = id;
+    js.src = "https://connect.facebook.net/en_US/sdk.js";
+    fjs.parentNode.insertBefore(js, fjs);
+  }(document, 'script', 'facebook-jssdk'));
+};
 
-    const loginWithFacebook = async () => {
-      try {
-        FB.login(async function(response) {
-          if (response.authResponse) {
-            const result = await fetch('http://127.0.0.1:8000/oauth/auth/facebook', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                access_token: response.authResponse.accessToken,
-                provider: 'facebook'
-              })
-            });
+const loginWithGoogle = async () => {
+  // use supabase for Google login
+  const { user, session, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: 'http://localhost:3000/courses'
+    }
+  });
 
-            const data = await result.json();
-            if (data.success) {
-              store.commit('setUser', data.user);
-              store.commit('setLoggedIn', true);
-              router.push('/courses');
-            } else {
-              // Removed local toast handling
-            }
-          } else {
-            // Removed local toast handling
-          }
-        }, { scope: 'public_profile,email' });
-      } catch (err) {
-        // Removed local toast handling
-        console.error(err);
-      }
-    };
+  if (error) {
+    console.error('Google login error:', error);
+    toast.error('Google login failed. Please try again.');
+  } else {
+    // Store user data and token in localStorage
+    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem('token', session.access_token);
 
-    const handleLogin = async () => {
-      try {
-        // Reset error state
-        error.value = null;
-        loading.value = true;
+    // Update Vuex store
+    store.commit('setUser', user);
+    store.commit('setLoggedIn', true);
 
-        // Basic validation
-        if (!email.value || !password.value) {
-          error.value = 'Please fill in all fields';
-          return;
-        }
+    // Navigate to courses page
+    router.push('/courses');
+  }
 
-        // Email validation
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email.value)) {
-          error.value = 'Please enter a valid email address';
-          return;
-        }
+};
 
-        const response = await axios.post('http://127.0.0.1:8000/login', {
-          email: email.value,
-          password: password.value
-        });
+const loginWithFacebook = async () => {
+  // use supabase for Facebook login
+  const { user, session, error } = await supabase.auth.signInWithOAuth({
+    provider: 'facebook',
+    options: {
+      redirectTo: 'http://localhost:3000/courses'
+    }
+  });
 
-        console.log('Login successful:', response.data);
+  if (error) {
+    console.error('Facebook login error:', error);
+    toast.error('Facebook login failed. Please try again.');
+  } else {
+    // Store user data and token in localStorage
+    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem('token', session.access_token);
 
-        // Get user's full name and split to get first name
-        const fullName = response.data.user.full_name || '';
-        const firstName = fullName.split(' ')[0];
+    // Update Vuex store
+    store.commit('setUser', user);
+    store.commit('setLoggedIn', true);
 
-        // Store user data and token in localStorage
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        localStorage.setItem('token', response.data.user.access_token);
+    // Navigate to courses page
+    router.push('/');
+  }
 
-        // Update Vuex store
-        store.commit('setUser', { ...response.data.user, firstName });
-        store.commit('setLoggedIn', true);
+};
 
-        // Store email if remember me is checked
-        if (rememberMe.value) {
-          localStorage.setItem('email', email.value);
-        } else {
-          localStorage.removeItem('email');
-        }
+const handleLogin = async () => {
+  loading.value = true;
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.value,
+      password: password.value
+    });
 
-        // Clear form
-        email.value = '';
-        password.value = '';
-        rememberMe.value = false;
-
-        // Navigate to courses page
-        router.push('/courses');
-
-      } catch (error) {
-        console.error('Login error:', error);
-        if (error.response?.data?.detail) {
-          error.value = error.response.data.detail;
-        } else {
-          error.value = 'Login failed. Please check your credentials and try again.';
-        }
-      } finally {
-        loading.value = false;
-      }
-    };
-
-    // Load remembered email if exists
-    if (localStorage.getItem('email')) {
-      email.value = localStorage.getItem('email');
-      rememberMe.value = true;
+    if (error) {
+      console.error('Login error:', error);
+      toast.error('Login failed. Please check your credentials and try again.');
+      return;
     }
 
-    // Initialize social login SDKs
-    loadGoogleAPI();
-    initFacebookSDK();
+    if (data.user && data.session) {
+      // Store user data and token in localStorage
+      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('token', data.session.access_token);
 
-    return {
-      email,
-      password,
-      showPassword,
-      loading,
-      rememberMe,
-      error,
-      handleLogin,
-      loginWithGoogle,
-      loginWithFacebook
-    };
+      // Update Vuex store
+      store.commit('setUser', data.user);
+      store.commit('setLoggedIn', true);
+
+      // Store email if remember me is checked
+      if (rememberMe.value) {
+        localStorage.setItem('email', email.value);
+      }
+
+      // Navigate to courses page
+      router.push('/courses');
+    }
+  } catch (err) {
+    console.error('Login error:', err);
+    toast.error('An unexpected error occurred. Please try again.');
+  } finally {
+    loading.value = false;
   }
-});
+};
+
+// Load remembered email if exists
+if (localStorage.getItem('email')) {
+  email.value = localStorage.getItem('email');
+  rememberMe.value = true;
+}
+
+// Initialize social login SDKs
+loadGoogleAPI();
+initFacebookSDK();
 </script>
 
 <style scoped>
