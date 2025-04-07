@@ -2,13 +2,14 @@ import { createRouter, createWebHistory } from "vue-router";
 import Home from "@/views/Home.vue";
 import CourseList from "@/components/CourseList.vue";
 import CourseDetails from "@/components/CourseDetails.vue";
-import MessagingComponent from "@/components/Messaging.vue";
 import QuizCreator from "@/components/QuizCreator.vue";
 import ParentDashboard from "@/components/ParentDashboard.vue";
 import LoginForm from "@/components/LoginForm.vue";
 import RegisterForm from "@/components/RegisterForm.vue";
 import ProfileView from '@/components/ProfileView.vue';
 import SettingsView from '@/components/SettingsView.vue';
+import ChatView from '@/components/Messaging.vue';
+import MessagingComponent from '@/components/MessagingComponent.vue';
 import store from '@/store';
 
 
@@ -29,6 +30,19 @@ const routes = [
     component: CourseDetails,
     meta: { requiresAuth: true },
     props: true
+  },
+  {
+    path: '/chat/:teacherId?',
+    name: 'chat',
+    component: ChatView,
+    meta: { requiresAuth: true } 
+  },
+  {
+    path: '/messages/:recipientId',
+    name: 'messages',
+    component: MessagingComponent,
+    props: true,
+    meta: { requiresAuth: true }
   },
   { 
     path: "/messages", 

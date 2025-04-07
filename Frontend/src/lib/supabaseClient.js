@@ -1,8 +1,8 @@
-import { createClient } from '@supabase/supabase-js'
+  import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = 'https://hupwxuuqqwvaoswnhtmi.supabase.co'
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1cHd4dXVxcXd2YW9zd25odG1pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI3OTQwMDYsImV4cCI6MjA1ODM3MDAwNn0.M0vi1tjIESPsqKIQuIIOQXSxjdSOXplELsdvYd-Q9MU'
-export const supabase = createClient(supabaseUrl, supabaseKey)
+  const supabaseUrl = 'https://hupwxuuqqwvaoswnhtmi.supabase.co'
+  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1cHd4dXVxcXd2YW9zd25odG1pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI3OTQwMDYsImV4cCI6MjA1ODM3MDAwNn0.M0vi1tjIESPsqKIQuIIOQXSxjdSOXplELsdvYd-Q9MU'
+  export const supabase = createClient(supabaseUrl, supabaseKey)
 
 // Get all courses with optional column selection
 export const getCourses = async (columns = '*') => {
