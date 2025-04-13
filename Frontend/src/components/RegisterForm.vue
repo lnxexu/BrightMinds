@@ -32,6 +32,7 @@
             {{ validationErrors.email }}
           </span>
         </div>
+        
 
         <!-- Password Field -->
         <div class="form-group">
@@ -163,6 +164,9 @@ const passwordMismatch = computed(() => {
   return password.value !== confirmPassword.value && confirmPassword.value.length > 0;
 });
 
+onMounted(() => {
+  role.value = route.query.role || ''; // Retrieve role from query params
+});
 // Methods
 const validateForm = () => {
   let isValid = true;
@@ -207,6 +211,8 @@ const handleRegister = async () => {
 
   try {
     isLoading.value = true;
+
+    // Register the user with Supabase Auth
     const { user, error: signUpError } = await supabase.auth.signUp({
       email: email.value,
       password: password.value,
@@ -218,31 +224,35 @@ const handleRegister = async () => {
     });
 
     if (signUpError) {
-       toast.error(signUpError.message, {
+      toast.error(signUpError.message, {
         position: 'top-right',
         timeout: 5000,
       });
+      return;
     }
+
+    // Save user details in localStorage
+    const [firstName, lastName] = name.value.split(' ');
+    localStorage.setItem('registeredEmail', email.value);
+    localStorage.setItem('firstName', firstName || '');
+    localStorage.setItem('lastName', lastName || '');
 
     toast.success('Registration successful! Please check your email for confirmation.', {
       position: 'top-right',
       timeout: 5000,
     });
 
-    // goes to the login page after successful registration
+    // Redirect to the login page
     router.push('/login');
   } catch (err) {
     toast.error('An error occurred during registration. Please try again.', {
       position: 'top-right',
       timeout: 5000,
     });
-    console.log(email.value, password.value, name.value);
-    error.value = 'Failed to register. Please try again.';
+    console.error('Registration error:', err);
   } finally {
     isLoading.value = false;
   }
-
-
 };
 
 const registerWithGoogle = async () => {

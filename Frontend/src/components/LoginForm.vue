@@ -65,7 +65,7 @@
 
       <p class="signup-text">
         Don't have an account?
-        <router-link to="/register" class="signup-link">Sign up</router-link>
+        <router-link to="/role-selection" class="signup-link">Sign up</router-link>
       </p>
     </div>
   </div>
