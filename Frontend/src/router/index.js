@@ -13,7 +13,8 @@ import RoleSelection from '@/components/RoleSelection.vue';
 import TeacherRegisterForm from '@/components/TeacherRegisterForm.vue';
 import Stream from '@/components/Stream.vue';
 import store from '@/store';
-
+import StudentDashboard from "@/components/student/StudentDashboard.vue";
+import StudentMessage from "@/components/student/StudentMessage.vue";
 
 
 
@@ -26,6 +27,16 @@ const routes = [
   { path: '/role-selection', 
     name: 'RoleSelection', 
     component: RoleSelection 
+  },
+  { 
+    path: '/student-message',
+    name: 'StudentMessage',
+    component: StudentMessage,
+  },
+  {
+    path: '/student-dashboard',
+    name: 'StudentDashboard',
+    component: StudentDashboard,
   },
   { path: '/register', 
     name: 'Register', 

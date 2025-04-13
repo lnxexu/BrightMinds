@@ -181,7 +181,7 @@ const handleLogin = async () => {
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email.value,
-      password: password.value
+      password: password.value,
     });
 
     if (error) {
@@ -195,6 +195,19 @@ const handleLogin = async () => {
       localStorage.setItem('user', JSON.stringify(data.user));
       localStorage.setItem('token', data.session.access_token);
 
+      // Fetch the user's role from the 'users' table
+      const { data: userRoleData, error: roleError } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', data.user.id)
+        .single();
+
+      if (roleError) {
+        console.error('Error fetching user role:', roleError.message);
+        toast.error('An error occurred while determining your role.');
+        return;
+      }
+
       // Update Vuex store
       store.commit('setUser', data.user);
       store.commit('setLoggedIn', true);
@@ -204,8 +217,14 @@ const handleLogin = async () => {
         localStorage.setItem('email', email.value);
       }
 
-      // Navigate to courses page
-      router.push('/courses');
+      // Redirect based on role
+      if (userRoleData.role === 'Teacher') {
+        router.push('/courses'); // Redirect to CourseList.vue
+      } else if (userRoleData.role === 'Student') {
+        router.push('/student-dashboard'); // Redirect to StudentDashboard.vue
+      } else {
+        toast.error('Invalid role. Please contact support.');
+      }
     }
   } catch (err) {
     console.error('Login error:', err);
