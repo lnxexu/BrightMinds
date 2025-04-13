@@ -224,7 +224,6 @@ const handleRegister = async () => {
       });
     }
 
-    // Handle successful registration (e.g., redirect to login page or show success message)
     toast.success('Registration successful! Please check your email for confirmation.', {
       position: 'top-right',
       timeout: 5000,
