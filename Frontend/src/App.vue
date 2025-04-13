@@ -97,6 +97,7 @@
 
 <script>
 import { mapState } from "vuex";
+import MessagingComponent from "./components/MessagingComponent.vue";
 
 export default {
   name: "App",

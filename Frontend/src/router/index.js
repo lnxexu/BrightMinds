@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import Home from "@/views/Home.vue";
 import CourseList from "@/components/CourseList.vue";
 import CourseDetails from "@/components/CourseDetails.vue";
-import MessagingComponent from "@/components/Messaging.vue";
+import MessagingComponent from "@/components/MessagingComponent.vue";
 import QuizCreator from "@/components/QuizCreator.vue";
 import ParentDashboard from "@/components/ParentDashboard.vue";
 import LoginForm from "@/components/LoginForm.vue";
@@ -15,8 +15,7 @@ import Stream from '@/components/Stream.vue';
 import store from '@/store';
 
 
-// ✅ Lazy-load MessagingComponent
-const MessagingComponent = () => import('@/components/MessagingComponent.vue')
+
 
 const routes = [
   {

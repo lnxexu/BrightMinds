@@ -1,13 +1,27 @@
 <template>
   <div class="messaging-container">
     <!-- 🔽 Recipient Dropdown Selector -->
-    <div class="recipient-selector" style="padding: 1rem 2rem; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
-      <label for="recipient" style="margin-right: 0.5rem; font-weight: 500;">Select Recipient:</label>
+    <div
+      class="recipient-selector"
+      style="
+        padding: 1rem 2rem;
+        background: #f9fafb;
+        border-bottom: 1px solid #e5e7eb;
+      "
+    >
+      <label for="recipient" style="margin-right: 0.5rem; font-weight: 500"
+        >Select Recipient:</label
+      >
       <select
         id="recipient"
         v-model="selectedRecipient"
         @change="updateRecipient"
-        style="padding: 0.5rem; border-radius: 8px; border: 1px solid #d1d5db; min-width: 200px;"
+        style="
+          padding: 0.5rem;
+          border-radius: 8px;
+          border: 1px solid #d1d5db;
+          min-width: 200px;
+        "
       >
         <option disabled value="">-- Select a recipient --</option>
         <option v-for="r in filteredRecipients" :key="r.id" :value="r.id">
@@ -25,18 +39,27 @@
     </div>
 
     <div class="messages-section" ref="messageContainer">
-      <div v-for="message in messages" 
-           :key="message.id" 
-           :class="['message-item', message.sender === 'You' ? 'outgoing' : 'incoming']">
+      <div
+        v-for="message in messages"
+        :key="message.id"
+        :class="[
+          'message-item',
+          message.sender === 'You' ? 'outgoing' : 'incoming',
+        ]"
+      >
         <div class="message-content">
           <div class="message-info">
             <span class="sender">{{ message.sender }}</span>
-            <span class="time">{{ message.time || '12:00 PM' }}</span>
+            <span class="time">{{ message.time || "12:00 PM" }}</span>
           </div>
           <p class="message-text">{{ message.text }}</p>
         </div>
         <div class="avatar">
-          <i :class="message.sender === 'You' ? 'fas fa-user' : 'fas fa-user-tie'"></i>
+          <i
+            :class="
+              message.sender === 'You' ? 'fas fa-user' : 'fas fa-user-tie'
+            "
+          ></i>
         </div>
       </div>
     </div>
@@ -67,139 +90,157 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
-import { supabase } from '../lib/supabaseClient'
+import { ref, onMounted, onUnmounted, nextTick, computed } from "vue";
+import { supabase } from "../lib/supabaseClient";
 
 // Props (for v-model)
 const props = defineProps({
   modelValue: {
     type: String,
-    required: true
-  }
-})
+    required: true,
+  },
+});
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(["update:modelValue"]);
 
-const messages = ref([])
-const newMessage = ref('')
-const messageContainer = ref(null)
-const subscription = ref(null)
-const currentUserId = ref(null)
-const selectedRecipient = ref(props.modelValue)
-const recipientOptions = ref([])
+const messages = ref([]);
+const newMessage = ref("");
+const messageContainer = ref(null);
+const subscription = ref(null);
+const currentUserId = ref(null);
+const selectedRecipient = ref(props.modelValue);
+const recipientOptions = ref([]);
 
 const updateRecipient = (event) => {
-  emit('update:modelValue', event.target.value)
-  fetchMessages()
-}
+  emit("update:modelValue", event.target.value);
+  fetchMessages();
+};
 
 const filteredRecipients = computed(() =>
-  recipientOptions.value.filter(r => r.id !== currentUserId.value)
-)
+  recipientOptions.value.filter((r) => r.id !== currentUserId.value)
+);
 
 const scrollToBottom = async () => {
-  await nextTick()
+  await nextTick();
   if (messageContainer.value) {
-    messageContainer.value.scrollTop = messageContainer.value.scrollHeight
+    messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
   }
-}
+};
 
 const fetchMessages = async () => {
-  if (!currentUserId.value || !selectedRecipient.value) return
+  if (!currentUserId.value || !selectedRecipient.value) return;
 
   const { data, error } = await supabase
-    .from('messages')
-    .select('*')
-    .or(`sender_id.eq.${currentUserId.value},recipient_id.eq.${currentUserId.value}`)
-    .order('created_at', { ascending: true })
+    .from("messages")
+    .select("*")
+    .or(
+      `sender_id.eq.${currentUserId.value},recipient_id.eq.${currentUserId.value}`
+    )
+    .order("created_at", { ascending: true });
 
   if (error) {
-    console.error('Error fetching messages:', error)
-    return
+    console.error("Error fetching messages:", error);
+    return;
   }
 
-  messages.value = data.filter(
-    msg => (msg.sender_id === currentUserId.value && msg.recipient_id === selectedRecipient.value) ||
-           (msg.sender_id === selectedRecipient.value && msg.recipient_id === currentUserId.value)
-  ).map(msg => ({
-    id: msg.id,
-    sender: msg.sender_id === currentUserId.value ? 'You' : 'Recipient',
-    text: msg.content,
-    time: new Date(msg.created_at).toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }))
+  messages.value = data
+    .filter(
+      (msg) =>
+        (msg.sender_id === currentUserId.value &&
+          msg.recipient_id === selectedRecipient.value) ||
+        (msg.sender_id === selectedRecipient.value &&
+          msg.recipient_id === currentUserId.value)
+    )
+    .map((msg) => ({
+      id: msg.id,
+      sender: msg.sender_id === currentUserId.value ? "You" : "Recipient",
+      text: msg.content,
+      time: new Date(msg.created_at).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    }));
 
-  await scrollToBottom()
-}
+  await scrollToBottom();
+};
 
 const sendMessage = async () => {
-  if (!newMessage.value.trim() || !currentUserId.value || !selectedRecipient.value) return
+  if (
+    !newMessage.value.trim() ||
+    !currentUserId.value ||
+    !selectedRecipient.value
+  )
+    return;
 
-  const { error } = await supabase.from('messages').insert([{
-    sender_id: currentUserId.value,
-    recipient_id: selectedRecipient.value,
-    content: newMessage.value.trim(),
-    created_at: new Date().toISOString()
-  }])
+  const { error } = await supabase.from("messages").insert([
+    {
+      sender_id: currentUserId.value,
+      recipient_id: selectedRecipient.value,
+      content: newMessage.value.trim(),
+      created_at: new Date().toISOString(),
+    },
+  ]);
 
-  if (!error) newMessage.value = ''
-}
+  if (!error) newMessage.value = "";
+};
 
 const subscribeToMessages = () => {
-  if (!currentUserId.value) return
+  if (!currentUserId.value) return;
 
   subscription.value = supabase
-    .channel('messages')
-    .on('postgres_changes', {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'messages',
-    }, (payload) => {
-      const msg = payload.new
-      const relevant =
-        (msg.sender_id === currentUserId.value && msg.recipient_id === selectedRecipient.value) ||
-        (msg.sender_id === selectedRecipient.value && msg.recipient_id === currentUserId.value)
+    .channel("messages")
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "messages",
+      },
+      (payload) => {
+        const msg = payload.new;
+        const relevant =
+          (msg.sender_id === currentUserId.value &&
+            msg.recipient_id === selectedRecipient.value) ||
+          (msg.sender_id === selectedRecipient.value &&
+            msg.recipient_id === currentUserId.value);
 
-      if (relevant) {
-        messages.value.push({
-          id: msg.id,
-          sender: msg.sender_id === currentUserId.value ? 'You' : 'Recipient',
-          text: msg.content,
-          time: new Date(msg.created_at).toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit'
-          })
-        })
-        scrollToBottom()
+        if (relevant) {
+          messages.value.push({
+            id: msg.id,
+            sender: msg.sender_id === currentUserId.value ? "You" : "Recipient",
+            text: msg.content,
+            time: new Date(msg.created_at).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          });
+          scrollToBottom();
+        }
       }
-    })
-    .subscribe()
-}
+    )
+    .subscribe();
+};
 
 onMounted(async () => {
-  const { data, error } = await supabase.auth.getUser()
+  const { data, error } = await supabase.auth.getUser();
   if (error || !data?.user) {
-    console.error('Unable to fetch authenticated user', error)
-    return
+    console.error("Unable to fetch authenticated user", error);
+    return;
   }
 
-  currentUserId.value = data.user.id
+  currentUserId.value = data.user.id;
 
-  const { data: users } = await supabase.from('users').select('id, full_name')
-  recipientOptions.value = users || []
+  const { data: users } = await supabase.from("users").select("id, full_name");
+  recipientOptions.value = users || [];
 
-  await fetchMessages()
-  subscribeToMessages()
-})
+  await fetchMessages();
+  subscribeToMessages();
+});
 
 onUnmounted(() => {
-  if (subscription.value) subscription.value.unsubscribe()
-})
+  if (subscription.value) subscription.value.unsubscribe();
+});
 </script>
-
-
 
 <style scoped>
 .messaging-container {

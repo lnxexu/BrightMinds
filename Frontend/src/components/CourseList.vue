@@ -157,6 +157,14 @@ onMounted(() => {
 .course-card {
   animation: slideIn 0.6s ease-out forwards;
   opacity: 0;
+  background: white;
+  border-radius: 24px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 @keyframes slideIn {
@@ -203,6 +211,9 @@ onMounted(() => {
 .card-content {
   padding: 2rem;
   transition: transform 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
 }
 
 .course-card:hover .card-content {
@@ -228,6 +239,7 @@ onMounted(() => {
   margin-bottom: 1.5rem;
   padding-bottom: 1.5rem;
   border-bottom: 1px solid #e5e7eb;
+  margin-top: auto;
 }
 
 .stat {
