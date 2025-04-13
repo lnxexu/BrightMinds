@@ -31,6 +31,10 @@ Earl D. Ang
             <i class="fas fa-user-shield"></i>
             <span>Parent Dashboard</span>
           </router-link>
+          <router-link to="quiz" class="dropdown-item">
+                  <i class="fas fa-question-circle"></i>
+                  Quiz
+                </router-link>
         </nav>
 
         <!-- Auth Buttons -->

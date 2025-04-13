@@ -9,6 +9,7 @@ import LoginForm from "@/components/LoginForm.vue";
 import RegisterForm from "@/components/RegisterForm.vue";
 import ProfileView from '@/components/ProfileView.vue';
 import SettingsView from '@/components/SettingsView.vue';
+import Quiz from '@/components/Quiz.vue';
 import store from '@/store';
 
 
@@ -22,6 +23,13 @@ const routes = [
     path: "/courses", 
     component: CourseList,
     meta: { requiresAuth: true }
+  },
+  { 
+    path: "/quiz", 
+    name: 'Quiz',
+    component: Quiz,
+    meta: { requiresAuth: true },
+    props: true
   },
   { 
     path: "/courses/:course_id", 
