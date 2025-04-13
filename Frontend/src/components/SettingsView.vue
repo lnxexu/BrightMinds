@@ -1,115 +1,133 @@
 <template>
   <div class="settings-page">
-    <h1>My Settings</h1>
+    <header class="settings-header">
+      <h1>Account Settings</h1>
+      <p class="settings-subtitle">Manage your account preferences and personal information</p>
+    </header>
+
     <div class="settings-container">
-      <div class="settings-sections">
-        <div class="settings-section">
-          <h2>
-            <i class="fas fa-user"></i>
-            Profile Settings
-          </h2>
-          <form @submit.prevent="updateProfile" class="settings-form">
-            <div class="form-group">
-              <label for="username">Username</label>
-              <input 
-                type="text" 
-                id="username" 
-                v-model="profile.username" 
-                class="form-control"
-                placeholder="Enter username"
-              >
-            </div>
-            <div class="form-group">
-              <label for="email">Email</label>
-              <input 
-                type="email" 
-                id="email" 
-                v-model="profile.email" 
-                class="form-control" 
-                disabled
-              >
-            </div>
-            <div class="form-group">
-              <label for="full_name">Full Name</label>
-              <input 
-                type="text" 
-                id="full_name" 
-                v-model="profile.full_name" 
-                class="form-control"
-                placeholder="Enter your full name"
-              >
-            </div>
-            <button type="submit" class="btn-save" :disabled="loading">
-              <i class="fas fa-save"></i>
-              {{ loading ? 'Saving...' : 'Save Profile Changes' }}
-            </button>
-          </form>
-        </div>
+      <aside class="settings-sidebar">
+        <nav>
+          <button 
+            v-for="tab in tabs" 
+            :key="tab.id"
+            :class="['tab-button', { active: activeTab === tab.id }]"
+            @click="activeTab = tab.id"
+          >
+            <i :class="tab.icon"></i>
+            {{ tab.name }}
+          </button>
+        </nav>
+      </aside>
 
-        <div class="settings-section">
-          <h2>
-            <i class="fas fa-bell"></i>
-            Notification Settings
-          </h2>
+      <main class="settings-content">
+        <!-- Notifications Section -->
+        <div v-show="activeTab === 'notifications'" class="settings-panel">
+          <div class="panel-header">
+            <h2>Notification Preferences</h2>
+            <p>Choose how you want to receive updates and alerts</p>
+          </div>
+
           <form @submit.prevent="updateNotificationSettings" class="settings-form">
-            <div class="checkbox-group">
-              <label>
-                <input type="checkbox" v-model="notifications.email_notifications">
-                <span>Receive email notifications</span>
-              </label>
+            <div class="toggle-group">
+              <div class="toggle-item">
+                <div class="toggle-content">
+                  <label>Email Notifications</label>
+                  <p>Receive important updates via email</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" v-model="notifications.email_notifications">
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <div class="toggle-item">
+                <div class="toggle-content">
+                  <label>Assignment Reminders</label>
+                  <p>Get notified about upcoming assignments</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" v-model="notifications.assignment_reminders">
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <div class="toggle-item">
+                <div class="toggle-content">
+                  <label>Course Updates</label>
+                  <p>Stay informed about course changes</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" v-model="notifications.course_updates">
+                  <span class="slider"></span>
+                </label>
+              </div>
             </div>
-            <div class="checkbox-group">
-              <label>
-                <input type="checkbox" v-model="notifications.assignment_reminders">
-                <span>Assignment reminders</span>
-              </label>
+
+            <div class="form-footer">
+              <button type="submit" class="btn-save" :disabled="loading">
+                <i class="fas fa-save"></i>
+                {{ loading ? 'Saving Changes...' : 'Save Preferences' }}
+              </button>
             </div>
-            <div class="checkbox-group">
-              <label>
-                <input type="checkbox" v-model="notifications.course_updates">
-                <span>Course updates</span>
-              </label>
-            </div>
-            <button type="submit" class="btn-save" :disabled="loading">
-              <i class="fas fa-save"></i>
-              {{ loading ? 'Saving...' : 'Save Notification Settings' }}
-            </button>
           </form>
         </div>
 
-        <div class="settings-section">
-          <h2>
-            <i class="fas fa-shield-alt"></i>
-            Privacy Settings
-          </h2>
+        <!-- Privacy Section -->
+        <div v-show="activeTab === 'privacy'" class="settings-panel">
+          <div class="panel-header">
+            <h2>Privacy Settings</h2>
+            <p>Control your privacy and visibility preferences</p>
+          </div>
+
           <form @submit.prevent="updatePrivacySettings" class="settings-form">
-            <div class="checkbox-group">
-              <label>
-                <input type="checkbox" v-model="privacy.profile_visible">
-                <span>Make profile visible to other users</span>
-              </label>
+            <div class="toggle-group">
+              <div class="toggle-item">
+                <div class="toggle-content">
+                  <label>Profile Visibility</label>
+                  <p>Allow other users to view your profile</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" v-model="privacy.profile_visible">
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <div class="toggle-item">
+                <div class="toggle-content">
+                  <label>Learning Progress</label>
+                  <p>Show your course progress to others</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" v-model="privacy.show_progress">
+                  <span class="slider"></span>
+                </label>
+              </div>
             </div>
-            <div class="checkbox-group">
-              <label>
-                <input type="checkbox" v-model="privacy.show_progress">
-                <span>Show my learning progress</span>
-              </label>
+
+            <div class="form-footer">
+              <button type="submit" class="btn-save" :disabled="loading">
+                <i class="fas fa-save"></i>
+                {{ loading ? 'Saving Changes...' : 'Save Settings' }}
+              </button>
             </div>
-            <button type="submit" class="btn-save" :disabled="loading">
-              <i class="fas fa-save"></i>
-              {{ loading ? 'Saving...' : 'Save Privacy Settings' }}
-            </button>
           </form>
         </div>
-      </div>
+      </main>
     </div>
   </div>
 </template>
-
 <script setup>
 import { supabase } from "../lib/supabaseClient";
 import { ref, onMounted } from 'vue';
+
 const loading = ref(false);
+const activeTab = ref('notifications');
+
+const tabs = [
+  { id: 'notifications', name: 'Notifications', icon: 'fas fa-bell' },
+  { id: 'privacy', name: 'Privacy', icon: 'fas fa-shield-alt' }
+];
 
 const profile = ref({
   username: '',
@@ -127,7 +145,6 @@ const privacy = ref({
   profile_visible: true,
   show_progress: true
 });
-
 
 
 const updateProfile = async () => {
@@ -197,131 +214,269 @@ onMounted(() => {
 </script>
 
 <style scoped>
+:root {
+  --primary: #4f46e5;
+  --primary-light: #818cf8;
+  --primary-dark: #4338ca;
+  --secondary: #f8fafc;
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
+}
 .settings-page {
-  max-width: 800px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 2rem;
 }
 
-.settings-page h1 {
-  font-size: 2.5rem;
-  color: #1a1a1a;
+.settings-header {
   margin-bottom: 2rem;
-  font-weight: 600;
-}
-
-.settings-container {
-  background: #ffffff;
+  text-align: center;
+  background: var(--primary);
+  padding: 2rem;
   border-radius: 16px;
+  color: var(--secondary);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
-.settings-sections {
+.settings-header h1 {
+  font-size: 2.5rem;
+  color: var(--secondary);
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+.settings-subtitle {
+  color: var(--secondary);
+  font-size: 1.1rem;
+}
+
+.settings-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: 250px 1fr;
   gap: 2rem;
-  padding: 2rem;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
 }
 
-.settings-section {
+.settings-sidebar {
   background: #f8f9fa;
-  padding: 2rem;
-  border-radius: 12px;
-  transition: transform 0.2s, box-shadow 0.2s;
+  padding: 1.5rem;
+  border-right: 1px solid #eee;
 }
 
-.settings-section:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
-}
-
-.settings-section h2 {
-  margin-bottom: 1.5rem;
-  color: #2c3e50;
-  font-size: 1.25rem;
-  font-weight: 600;
+.tab-button {
+  width: 100%;
+  padding: 1rem;
+  margin-bottom: 0.5rem;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
+  font-size: 1rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.form-group {
-  margin-bottom: 1.5rem;
+.tab-button:hover {
+  background: var(--secondary);
 }
 
-.form-group label {
-  font-weight: 500;
-  color: #4a5568;
+.tab-button.active {
+  background: var(--primary);
+  color: var(--secondary);
+}
+
+.settings-panel {
+  padding: 2rem;
+}
+
+.panel-header {
+  margin-bottom: 2rem;
+}
+
+.panel-header h2 {
+  font-size: 1.5rem;
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
-  display: block;
+}
+
+.panel-header p {
+  color: var(--text-secondary);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.input-with-icon {
+  position: relative;
+}
+
+.input-with-icon i {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+}
+
+.input-with-icon input {
+  padding-left: 2.5rem;
 }
 
 .form-control {
   width: 100%;
-  padding: 0.75rem 1rem;
-  border: 2px solid #e2e8f0;
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
   font-size: 0.95rem;
-  transition: border-color 0.2s;
-  background: white;
+  color: var(--text-primary);
+  background-color: white;
+  transition: all 0.2s ease;
 }
 
 .form-control:focus {
   outline: none;
-  border-color: #4CAF50;
-  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
 .form-control:disabled {
-  background: #f1f1f1;
+  background-color: #f8fafc;
   cursor: not-allowed;
+  color: var(--text-secondary);
 }
 
-.checkbox-group {
-  background: white;
-  padding: 0.75rem;
-  border-radius: 8px;
-  border: 2px solid #e2e8f0;
-  transition: border-color 0.2s;
+.form-control::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.8;
 }
 
-.checkbox-group:hover {
-  border-color: #4CAF50;
-}
-
-.checkbox-group label {
-  font-weight: normal;
+.toggle-group {
   display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.toggle-item {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 0.75rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.toggle-content label {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.toggle-content p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
   cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 34px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: var(--primary);
+}
+
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+.form-footer {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .btn-save {
-  width: 100%;
-  background: #4CAF50;
-  color: white;
-  padding: 1rem;
+  background: var(--primary);
+  color: var(--secondary);
+  padding: 0.75rem 1.5rem;
   border: none;
   border-radius: 8px;
   font-weight: 600;
   font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
   transition: all 0.2s;
 }
 
-btn-save:hover:not(:disabled) {
-  background: #45a049;
+.btn-save:hover:not(:disabled) {
+  background: var(--primary-dark);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
 }
 
 .btn-save:disabled {
-  background: #9ca3af;
+  background: var(--text-secondary);
   cursor: not-allowed;
 }
 
 @media (max-width: 768px) {
-  .settings-sections {
+  .settings-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .settings-sidebar {
+    border-right: none;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .form-grid {
     grid-template-columns: 1fr;
   }
   
