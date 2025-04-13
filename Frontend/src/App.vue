@@ -12,10 +12,22 @@
 
         <!-- Nav Links -->
         <nav v-if="isLoggedIn" class="nav-links">
-          <router-link to="/courses" class="nav-link"><i class="fas fa-book"></i><span>Courses</span></router-link>
-          <router-link to="/messages" class="nav-link"><i class="fas fa-comments"></i><span>Messaging</span></router-link>
-          <router-link to="/quiz-creator" class="nav-link"><i class="fas fa-tasks"></i><span>Quiz Creator</span></router-link>
-          <router-link to="/parent" class="nav-link"><i class="fas fa-user-shield"></i><span>Parent Dashboard</span></router-link>
+          <router-link to="/courses" class="nav-link">
+            <i class="fas fa-book"></i>
+            <span>Courses</span>
+          </router-link>
+          <router-link to="/messages" class="nav-link">
+            <i class="fas fa-comments"></i>
+            <span>Messaging</span>
+          </router-link>
+          <router-link to="/quiz-creator" class="nav-link">
+            <i class="fas fa-tasks"></i>
+            <span>Quiz Creator</span>
+          </router-link>
+          <router-link to="/parent" class="nav-link">
+            <i class="fas fa-user-shield"></i>
+            <span>Parent Dashboard</span>
+          </router-link>
         </nav>
 
         <!-- Auth Buttons -->
@@ -115,44 +127,22 @@ export default {
       this.$store.dispatch('logout')
       this.showProfileMenu = false
       this.$router.push('/login')
-    },
-    listenForMessages() {
-      this.messageSubscription = supabase
-        .channel('messages')
-        .on('postgres_changes', {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages'
-        }, (payload) => {
-          const msg = payload.new
-          if (msg.recipient_id === this.currentUserId && this.$route.path !== '/messages' && !this.showChat) {
-            this.hasUnreadMessage = true
-          }
-        })
-        .subscribe()
     }
   },
-  async created() {
-    const { data, error } = await supabase.auth.getUser()
-    if (data?.user) {
-      this.currentUserId = data.user.id
-      this.listenForMessages()
-    }
-
+  created() {
+    // Check auth state when app loads
     this.$store.dispatch('checkAuthState').then(() => {
+      // If user is on a protected route and not logged in, redirect to login
       if (this.$route.meta.requiresAuth && !this.isLoggedIn) {
-        this.$router.push('/login')
-      } else if (this.$route.meta.requiresGuest && this.isLoggedIn) {
-        this.$router.push('/')
+        this.$router.push('/login');
       }
-    })
-  },
-  unmounted() {
-    if (this.messageSubscription) {
-      this.messageSubscription.unsubscribe()
-    }
+      // If user is on a guest route and logged in, redirect to home
+      else if (this.$route.meta.requiresGuest && this.isLoggedIn) {
+        this.$router.push('/');
+      }
+    });
   }
-}
+};
 </script>
 
 
