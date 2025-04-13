@@ -31,6 +31,10 @@ Earl D. Ang
             <i class="fas fa-user-shield"></i>
             <span>Parent Dashboard</span>
           </router-link>
+          <router-link to="/stream" class="nav-link">
+            <i class="fas fa-bullhorn"></i>
+            <span>Stream</span>
+          </router-link>
         </nav>
 
         <!-- Auth Buttons -->

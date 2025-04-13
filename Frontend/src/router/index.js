@@ -11,7 +11,7 @@ import ProfileView from '@/components/ProfileView.vue';
 import SettingsView from '@/components/SettingsView.vue';
 import RoleSelection from '@/components/RoleSelection.vue';
 import TeacherRegisterForm from '@/components/TeacherRegisterForm.vue';
-
+import Stream from '@/components/Stream.vue';
 
 
 import store from '@/store';
@@ -29,7 +29,8 @@ const routes = [
   },
   { path: '/register', 
     name: 'Register', 
-    component: RegisterForm 
+    component: RegisterForm,
+    meta: { requiresGuest: true }
   },
   { path: '/register-teacher', 
     name: 'TeacherRegister', 
@@ -46,6 +47,13 @@ const routes = [
     component: CourseDetails,
     meta: { requiresAuth: true },
     props: true
+  },
+  {
+    path: '/stream',
+    name: 'Stream',
+    component: Stream,
+    meta: { requiresAuth: true },
+
   },
   { 
     path: "/messages", 
@@ -65,11 +73,6 @@ const routes = [
   { 
     path: "/login", 
     component: LoginForm,
-    meta: { requiresGuest: true }
-  },
-  { 
-    path: "/register", 
-    component: RegisterForm,
     meta: { requiresGuest: true }
   },
   {
