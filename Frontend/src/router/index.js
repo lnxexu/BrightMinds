@@ -64,7 +64,6 @@ const routes = [
     name: 'Stream',
     component: Stream,
     meta: { requiresAuth: true },
-
   },
   { 
     path: '/chat/:recipientId?',
@@ -73,7 +72,6 @@ const routes = [
     props: true,
     meta: { requiresAuth: true }
   },
-  // ✅ Fullscreen messaging page
   {
     path: '/messages',
     component: MessagingComponent,
@@ -116,6 +114,12 @@ const routes = [
     path: "/settings",
     name: 'Settings',
     component: SettingsView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/quiz/:quizId',
+    name: 'QuizTaker',
+    component: () => import('@/components/QuizTaker.vue'),
     meta: { requiresAuth: true }
   }
 ]

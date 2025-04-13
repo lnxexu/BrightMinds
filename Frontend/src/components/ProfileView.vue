@@ -22,7 +22,7 @@
             <i class="fas fa-edit"></i>
             Edit Profile
           </button>
-          <button class="secondary-button">
+          <button class="secondary-button" @click="settings">
             <i class="fas fa-cog"></i>
             Settings
           </button>
@@ -71,19 +71,6 @@
               <div class="info-item">
                 <label>Address</label>
                 <p>{{ address }}</p>
-              </div>
-            </div>
-          </section>
-
-          <section class="info-section" v-motion-slide-right>
-            <h2><i class="fas fa-shield-alt"></i> Account Security</h2>
-            <div class="security-items">
-              <div class="security-item">
-                <div>
-                  <h3>Two-Factor Authentication</h3>
-                  <p>Secure your account with 2FA</p>
-                </div>
-                <button class="toggle-button">Enable</button>
               </div>
             </div>
           </section>
@@ -142,12 +129,14 @@
 import { ref, computed, onMounted, onBeforeMount, onBeforeUnmount} from 'vue'
 import { supabase } from '@/lib/supabaseClient'
 import { useToast } from 'vue-toastification'
+import { useRouter } from 'vue-router'
 
 const toast = useToast()
 const loading = ref(false)
 const showEditModal = ref(false)
 
 // Extended user data
+const router = useRouter()
 const username = ref('')
 const fullName = ref('John Doe')
 const email = ref('john.doe@example.com')
@@ -181,6 +170,12 @@ const formatDate = (date) => {
     console.error('Date formatting error:', error)
     return 'Invalid date'
   }
+}
+
+const settings = () => {
+  // Navigate to settings page
+  router.push('/settings')
+
 }
 
 // Edit form state
