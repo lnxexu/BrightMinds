@@ -1,14 +1,19 @@
 import { createRouter, createWebHistory } from "vue-router";
 import Home from "@/views/Home.vue";
 import CourseList from "@/components/CourseList.vue";
-import CourseDetails from "@/components/CourseDetails.vue"
-import QuizCreator from "@/components/QuizCreator.vue"
-import ParentDashboard from "@/components/ParentDashboard.vue"
-import LoginForm from "@/components/LoginForm.vue"
-import RegisterForm from "@/components/RegisterForm.vue"
-import ProfileView from '@/components/ProfileView.vue'
-import SettingsView from '@/components/SettingsView.vue'
-import store from '@/store'
+import CourseDetails from "@/components/CourseDetails.vue";
+import MessagingComponent from "@/components/Messaging.vue";
+import QuizCreator from "@/components/QuizCreator.vue";
+import ParentDashboard from "@/components/ParentDashboard.vue";
+import LoginForm from "@/components/LoginForm.vue";
+import RegisterForm from "@/components/RegisterForm.vue";
+import ProfileView from '@/components/ProfileView.vue';
+import SettingsView from '@/components/SettingsView.vue';
+import RoleSelection from '@/components/RoleSelection.vue';
+import TeacherRegisterForm from '@/components/TeacherRegisterForm.vue';
+import Stream from '@/components/Stream.vue';
+import store from '@/store';
+
 
 // ✅ Lazy-load MessagingComponent
 const MessagingComponent = () => import('@/components/MessagingComponent.vue')
@@ -19,20 +24,39 @@ const routes = [
     name: 'Home',
     component: Home
   },
-  {
+  { path: '/role-selection', 
+    name: 'RoleSelection', 
+    component: RoleSelection 
+  },
+  { path: '/register', 
+    name: 'Register', 
+    component: RegisterForm,
+    meta: { requiresGuest: true }
+  },
+  { path: '/register-teacher', 
+    name: 'TeacherRegister', 
+    component: TeacherRegisterForm 
+  },
+  { 
     path: "/courses",
     component: CourseList,
     meta: { requiresAuth: true }
   },
-  {
-    path: "/courses/:course_id",
+  { 
+    path: "/courses/:course_id", 
     name: 'CourseDetails',
     component: CourseDetails,
     meta: { requiresAuth: true },
     props: true
   },
-  // ✅ Chat Head route (could be used as small mode, floating mode, or popup)
   {
+    path: '/stream',
+    name: 'Stream',
+    component: Stream,
+    meta: { requiresAuth: true },
+
+  },
+  { 
     path: '/chat/:recipientId?',
     name: 'chat',
     component: MessagingComponent,

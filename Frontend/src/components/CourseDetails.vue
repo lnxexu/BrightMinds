@@ -77,7 +77,7 @@
                   class="form-select"
                 >
                   <option value="" disabled selected>Select grade level</option>
-                  <option value="Kindergarten">Kindergarten</option>
+                  <option value="K">Kinder</option>
                   <option
                     v-for="grade in availableGrades"
                     :key="grade"

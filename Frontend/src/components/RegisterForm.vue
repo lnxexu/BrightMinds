@@ -139,10 +139,11 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, computed, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import { supabase } from '../lib/supabaseClient.js'; 
 import { useToast } from 'vue-toastification'; 
+
 // Reactive state
 const toast = useToast();
 const name = ref("");
@@ -158,6 +159,8 @@ const validationErrors = ref({
   email: null,
   password: null
 });
+const route = useRoute();
+const role = ref('');
 
 // Computed properties
 const passwordMismatch = computed(() => {
@@ -167,6 +170,7 @@ const passwordMismatch = computed(() => {
 onMounted(() => {
   role.value = route.query.role || ''; // Retrieve role from query params
 });
+
 // Methods
 const validateForm = () => {
   let isValid = true;
@@ -254,36 +258,6 @@ const handleRegister = async () => {
     isLoading.value = false;
   }
 };
-
-const registerWithGoogle = async () => {
-  try {
-    isLoading.value = true;
-    // Implement Google OAuth registration
-    console.log('Google registration not implemented');
-  } catch (err) {
-    console.error('Google registration error:', err);
-    error.value = 'Failed to register with Google';
-  } finally {
-    isLoading.value = false;
-  }
-};
-
-const registerWithFacebook = async () => {
-  try {
-    isLoading.value = true;
-    // Implement Facebook OAuth registration
-    console.log('Facebook registration not implemented');
-  } catch (err) {
-    console.error('Facebook registration error:', err);
-    error.value = 'Failed to register with Facebook';
-  } finally {
-    isLoading.value = false;
-  }
-};
-
-// Define emits
-const emit = defineEmits(['register-success']);
-
 </script>
 
 <style scoped>

@@ -46,7 +46,20 @@ export const getUserByCredentials = async (email) => {
     return { data: null, error }
   }
 }
+// Get all posts with optional column selection
+export const getPosts = async (columns = '*') => {
+  try {
+    const { data, error } = await supabase
+      .from('posts')
+      .select(columns)
+      .order('timestamp', { ascending: false }); // Order by timestamp (newest first)
 
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error };
+  }
+};
 // Get user by ID
 export const getUserById = async (userId) => {
   try {
