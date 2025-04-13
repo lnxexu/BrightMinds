@@ -34,6 +34,117 @@
       </div>
     </div>
 
+    <!-- Add topic button that will show a modal -->
+    <!-- Add this after the Course Info Card and before the Topics List -->
+<div class="action-buttons">
+  <button @click="showTopicMaterial({})" class="action-btn add-btn">
+    <i class="fas fa-plus"></i> Add Topic
+  </button>
+  <button 
+    @click="handleModifyTopic(selectedTopic)" 
+    class="action-btn edit-btn"
+    v-if="selectedTopic"
+  >
+    <i class="fas fa-edit"></i> Modify Topic
+  </button>
+</div>
+
+
+    <!-- Add topic Modal -->
+    <div
+      v-if="showAddTopicModal"
+      class="modal-overlay"
+      @click="closeAddTopicModal"
+    >
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+  <h3>{{ selectedTopic?.id ? 'Modify Topic' : 'Add New Topic' }}</h3>
+  <button class="close-button" @click="closeAddTopicModal">
+    <i class="fas fa-times"></i>
+  </button>
+</div>
+        <div class="modal-body">
+          <form @submit.prevent="handleAddTopic" class="topic-form">
+            <div class="form-group">
+              <label for="topicName">Topic Name</label>
+              <input
+                id="topicName"
+                v-model="newTopic.topic_name"
+                type="text"
+                required
+                placeholder="Enter topic name"
+              />
+            </div>
+            <div class="form-group">
+              <label for="gradeLevel">Grade Level</label>
+              <input
+                id="gradeLevel"
+                v-model="newTopic.grade_level"
+                type="number"
+                required
+                min="1"
+                max="12"
+                placeholder="Enter grade level"
+              />
+            </div>
+            <div class="form-group">
+              <label for="topicContent">Topic Content</label>
+              <div class="file-upload-container">
+                <div
+                  class="file-upload-area"
+                  @drop.prevent="handleFileDrop"
+                  @dragover.prevent="dragover = true"
+                  @dragleave.prevent="dragover = false"
+                  :class="{ dragging: dragover }"
+                >
+                  <input
+                    type="file"
+                    id="fileUpload"
+                    ref="fileInput"
+                    @change="handleFileSelect"
+                    multiple
+                    accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.mp4,.mp3"
+                    class="file-input"
+                  />
+                  <div class="upload-content">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Drag and drop files here or click to browse</p>
+                    <span class="file-types"
+                      >Supported files: PDF, DOC, Images, Videos, etc.</span
+                    >
+                  </div>
+                </div>
+                <!-- Preview uploaded files -->
+                <div v-if="selectedFiles.length" class="selected-files">
+                  <div
+                    v-for="(file, index) in selectedFiles"
+                    :key="index"
+                    class="file-item"
+                  >
+                    <i :class="getFileIcon(file.type)"></i>
+                    <span class="file-name">{{ file.name }}</span>
+                    <button @click="removeFile(index)" class="remove-file">
+                      <i class="fas fa-times"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn-submit">Add Topic</button>
+              <button
+                type="button"
+                class="btn-cancel"
+                @click="closeAddTopicModal"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
     <!-- Topics List -->
     <div class="topics-container">
       <h3 class="topics-title animate-fade-in">Course Topics</h3>
@@ -41,12 +152,7 @@
         <i class="fas fa-search"></i>
         <p>No topics found for the selected grade</p>
       </div>
-      <TransitionGroup 
-        v-else
-        name="topic-list"
-        tag="div"
-        class="topics-grid"
-      >
+      <TransitionGroup v-else name="topic-list" tag="div" class="topics-grid">
         <div
           v-for="(topic, index) in filteredTopics"
           :key="topic.id"
@@ -58,7 +164,7 @@
             <i class="fas fa-book"></i>
           </div>
           <div class="topic-content">
-            <h4 class="topic-title">{{ topic.course }}</h4>
+            <h4 class="topic-title">{{ topic.topic_name }}</h4>
             <span class="topic-grade">Grade {{ topic.grade_level }}</span>
           </div>
         </div>
@@ -66,27 +172,52 @@
     </div>
 
     <Transition name="modal">
-      <div v-if="showModal" class="modal-overlay" @click="closeModal">
-        <div class="modal-content" @click.stop>
-          <div class="modal-header">
-            <h3>
-              {{ selectedTopic?.course }} - Grade {{ selectedTopic?.grade_level }}
-            </h3>
-            <button class="close-button" @click="closeModal">
-              <i class="fas fa-times"></i>
-            </button>
-          </div>
-          <div class="modal-body">
-            <div v-if="topicMaterial" class="material-content">
-              {{ topicMaterial.content }}
-            </div>
-            <div v-else class="loading-state">
-              <i class="fas fa-spinner fa-spin"></i>
-              <p>Loading material...</p>
-            </div>
+      <!-- Replace the existing modal content -->
+<div v-if="showModal" class="modal-overlay" @click="closeModal">
+  <div class="modal-content" @click.stop>
+    <div class="modal-header">
+      <h3>
+        {{ selectedTopic?.topic_name }} - Grade {{ selectedTopic?.grade_level }}
+      </h3>
+      <div class="modal-actions">
+        <button @click="handleModifyTopic(selectedTopic)" class="action-btn edit-btn">
+          <i class="fas fa-edit"></i> Edit Topic
+        </button>
+        <button class="close-button" @click="closeModal">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div v-if="topicMaterial" class="material-content">
+        <div v-if="topicMaterial?.materials" class="material-files">
+          <h4>Topic Materials:</h4>
+          <div class="files-grid">
+            <a
+              v-for="file in topicMaterial.materials"
+              :key="file.url"
+              :href="file.url"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="file-link"
+            >
+              <i :class="getFileIcon(file.type)"></i>
+              <span>{{ file.name }}</span>
+              <span class="file-size">({{ formatFileSize(file.size) }})</span>
+            </a>
           </div>
         </div>
+        <div v-else class="no-materials">
+          <p>No materials available for this topic.</p>
+        </div>
       </div>
+      <div v-else class="loading-state">
+        <i class="fas fa-spinner fa-spin"></i>
+        <p>Loading material...</p>
+      </div>
+    </div>
+  </div>
+</div>
     </Transition>
 
     <router-link to="/courses" class="back-button animate-fade-in">
@@ -109,39 +240,276 @@ const router = useRouter();
 const course = ref(null);
 const selectedGrade = ref("all");
 const topics = ref([]);
-const showModal = ref(false)
-const selectedTopic = ref(null)
-const topicMaterial = ref(null)
+const showModal = ref(false);
+const selectedTopic = ref(null);
+const topicMaterial = ref(null);
+const showAddTopicModal = ref(false);
+const newTopic = ref({
+  topic_name: "",
+  grade_level: "",
+  content: "",
+});
+const fileInput = ref(null);
+const dragover = ref(false);
+const selectedFiles = ref([]);
 
 
-const showTopicMaterial = async (topic) => {
-  selectedTopic.value = topic
-  showModal.value = true
-  topicMaterial.value = null
+const formatFileSize = (bytes) => {
+  if (!bytes) return '0 Bytes';
+  
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+};
 
+const fetchTopicMaterial = async () => {
   try {
     const { data, error } = await supabase
-      .from('topic_materials')
-      .select('*')
-      .eq('topic_id', topic.id)
-      .single()
+      .from("topics")
+      .select("materials")
+      .eq("id", selectedTopic.value.id)
+      .single();
 
-    if (error) {
-      console.error('Error fetching topic material:', error)
-      return
+    if (error) throw error;
+
+    // If materials exist and is an array, return it directly
+    if (data?.materials && Array.isArray(data.materials)) {
+      return data;
+    }
+    
+    // If materials is a string, try to parse it
+    if (data?.materials && typeof data.materials === 'string') {
+      try {
+        const parsedMaterials = JSON.parse(data.materials);
+        return { materials: parsedMaterials };
+      } catch (e) {
+        console.error('Error parsing materials:', e);
+      }
     }
 
-    topicMaterial.value = data
+    return data;
   } catch (error) {
-    console.error('Error:', error)
+    console.error("Error fetching topic material:", error);
+    return null;
   }
-}
+};
+
+const handleFileDrop = (e) => {
+  dragover.value = false;
+  const files = Array.from(e.dataTransfer.files);
+  addFiles(files);
+};
+
+const handleFileSelect = (e) => {
+  const files = Array.from(e.target.files);
+  addFiles(files);
+};
+
+const addFiles = (files) => {
+  files.forEach((file) => {
+    // Check if file is already selected
+    if (!selectedFiles.value.some((f) => f.name === file.name)) {
+      selectedFiles.value.push(file);
+    }
+  });
+};
+
+const removeFile = (index) => {
+  selectedFiles.value.splice(index, 1);
+};
+
+const getFileIcon = (fileType) => {
+  if (fileType.includes("image")) return "fas fa-image";
+  if (fileType.includes("video")) return "fas fa-video";
+  if (fileType.includes("pdf")) return "fas fa-file-pdf";
+  if (fileType.includes("word")) return "fas fa-file-word";
+  return "fas fa-file";
+};
+
+const handleAddTopic = async () => {
+  try {
+    // Input validation
+    if (!newTopic.value.topic_name?.trim() || !newTopic.value.grade_level) {
+      throw new Error("Topic name and grade level are required");
+    }
+
+    // File validation for new files
+    const MAX_FILE_SIZE = 50 * 1024 * 1024;
+    const ALLOWED_TYPES = [
+      "image/",
+      "video/",
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+
+    for (const file of selectedFiles.value) {
+      if (file.size > MAX_FILE_SIZE) {
+        throw new Error(`File ${file.name} exceeds 50MB size limit`);
+      }
+      if (!ALLOWED_TYPES.some((type) => file.type.startsWith(type))) {
+        throw new Error(`File ${file.name} has unsupported format`);
+      }
+    }
+
+    let topicData;
+    
+    if (newTopic.value.id) {
+      // Update existing topic
+      const { data, error: topicError } = await supabase
+        .from("topics")
+        .update({
+          topic_name: newTopic.value.topic_name.trim(),
+          grade_level: newTopic.value.grade_level,
+          course: course.value.name,
+        })
+        .eq("id", newTopic.value.id)
+        .select()
+        .single();
+
+      if (topicError) throw topicError;
+      topicData = data;
+    } else {
+      // Insert new topic
+      const { data, error: topicError } = await supabase
+        .from("topics")
+        .insert([{
+          topic_name: newTopic.value.topic_name.trim(),
+          grade_level: newTopic.value.grade_level,
+          course: course.value.name,
+        }])
+        .select()
+        .single();
+
+      if (topicError) throw topicError;
+      topicData = data;
+    }
+
+    // Handle file uploads if there are new files
+    if (selectedFiles.value.length > 0) {
+      const uploadedUrls = await Promise.all(
+        selectedFiles.value.map(async (file) => {
+          const fileExt = file.name.split(".").pop();
+          const safeFileName = `${topicData.id}/${Date.now()}-${file.name.replace(
+            /[^a-zA-Z0-9.-]/g,
+            "_"
+          )}.${fileExt}`;
+
+          const { data, error } = await supabase.storage
+            .from("materials")
+            .upload(safeFileName, file, {
+              cacheControl: "3600",
+              upsert: false,
+            });
+
+          if (error) throw error;
+
+          const {
+            data: { publicUrl },
+          } = supabase.storage.from("materials").getPublicUrl(safeFileName);
+
+          return {
+            url: publicUrl,
+            type: file.type,
+            name: file.name,
+            size: file.size,
+          };
+        })
+      );
+
+      // Combine existing materials with new ones if modifying
+      const materials = newTopic.value.id
+        ? [...(newTopic.value.existingMaterials || []), ...uploadedUrls]
+        : uploadedUrls;
+
+      // Update materials
+      const { error: materialError } = await supabase
+        .from("topics")
+        .update({
+          materials: materials,
+        })
+        .eq("id", topicData.id);
+
+      if (materialError) throw materialError;
+    }
+
+    // Reset form and close modal
+    resetForm();
+    showAddTopicModal.value = false;
+
+    // Refresh the topics list
+    await fetchCourseDetails();
+  } catch (error) {
+    console.error("Error handling topic:", error);
+    throw error;
+  }
+};
+
+// Add this helper function to keep the code DRY
+const resetForm = () => {
+  newTopic.value = {
+    topic_name: "",
+    grade_level: "",
+    content: "",
+  };
+  selectedFiles.value = [];
+};
+
+const closeAddTopicModal = () => {
+  showAddTopicModal.value = false;
+  newTopic.value = {
+    topic_name: "",
+    grade_level: "",
+    content: "",
+  };
+};
+
+const showTopicMaterial = async (topic) => {
+  if (Object.keys(topic).length === 0) {
+    showAddTopicModal.value = true;
+    return;
+  }
+  selectedTopic.value = topic;
+  showModal.value = true;
+  topicMaterial.value = null;
+
+  const material = await fetchTopicMaterial(topic.id);
+  if (material) {
+    topicMaterial.value = material;
+  }
+};
 
 const closeModal = () => {
-  showModal.value = false
-  selectedTopic.value = null
-  topicMaterial.value = null
-}
+  showModal.value = false;
+  selectedTopic.value = null;
+  topicMaterial.value = null;
+};
+
+const handleModifyTopic = async (topic) => {
+  if (!topic) return;
+  
+  // Close the view modal
+  showModal.value = false;
+  
+  // Pre-fill the form with existing topic data
+  newTopic.value = {
+    id: topic.id,
+    topic_name: topic.topic_name,
+    grade_level: topic.grade_level,
+    content: topic.content || "",
+  };
+  
+  // Get existing materials
+  const material = await fetchTopicMaterial(topic.id);
+  if (material?.materials) {
+    // Store existing materials for reference
+    newTopic.value.existingMaterials = material.materials;
+  }
+  
+  showAddTopicModal.value = true;
+};
 
 // Fetch course details from Supabase
 const fetchCourseDetails = async () => {
@@ -162,14 +530,13 @@ const fetchCourseDetails = async () => {
     // Fetch topics for this course
     const { data: topicsData, error: topicsError } = await supabase
       .from("topics")
-      .select("*")
+      .select("id, topic_name, grade_level")
       .eq("course", course.value.name);
 
     if (topicsError) {
       console.error("Error fetching topics:", topicsError);
       return;
     }
-
     topics.value = topicsData;
   } catch (error) {
     console.error("Error:", error);
@@ -259,6 +626,21 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.modal-header .edit-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+.modal-header .close-button {
+  padding: 0.5rem;
 }
 
 .course-icon i {
@@ -354,6 +736,23 @@ select {
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
   border-color: #d1d5db;
 }
+.file-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #374151;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.file-size {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-left: auto;
+}
 
 .topic-icon {
   background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
@@ -434,6 +833,49 @@ select {
   transform: translateX(-4px);
 }
 
+/* Add these styles in your <style> section */
+.action-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding: 0 1rem;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  color: white;
+}
+
+.add-btn {
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+}
+
+.add-btn:hover {
+  background: linear-gradient(135deg, #4338ca 0%, #4f46e5 100%);
+  transform: translateY(-2px);
+}
+
+.edit-btn {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+}
+
+.edit-btn:hover {
+  background: linear-gradient(135deg, #047857 0%, #059669 100%);
+  transform: translateY(-2px);
+}
+
+.action-btn i {
+  font-size: 1rem;
+}
+
 .loading-state {
   display: flex;
   flex-direction: column;
@@ -498,6 +940,73 @@ select {
   color: #1f2937;
 }
 
+.topic-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #374151;
+}
+
+.form-group input,
+.form-group textarea {
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  font-size: 1rem;
+  width: 100%;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.btn-submit,
+.btn-cancel {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-submit {
+  background: #4f46e5;
+  color: white;
+  border: none;
+}
+
+.btn-submit:hover {
+  background: #4338ca;
+}
+
+.btn-cancel {
+  background: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
+}
+
+.btn-cancel:hover {
+  background: #e5e7eb;
+}
+
 .modal-body {
   padding: 1.5rem;
 }
@@ -505,6 +1014,57 @@ select {
 .material-content {
   line-height: 1.6;
   color: #374151;
+  padding: 1rem;
+}
+
+.content-text {
+  line-height: 1.6;
+  color: #374151;
+  margin-bottom: 1.5rem;
+}
+
+.material-files {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1rem;
+}
+
+.material-files h4 {
+  margin-bottom: 1rem;
+  color: #374151;
+}
+
+.files-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.file-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #374151;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.file-link:hover {
+  background: #f3f4f6;
+  transform: translateY(-2px);
+}
+
+.file-link i {
+  color: #4f46e5;
+  font-size: 1.25rem;
+}
+
+.file-link span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Make topic cards clickable */
@@ -516,6 +1076,101 @@ select {
   transform: translateY(-3px);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
   border-color: #4f46e5;
+}
+
+.file-upload-container {
+  margin-top: 0.5rem;
+}
+
+.file-upload-area {
+  position: relative;
+  border: 2px dashed #e5e7eb;
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  transition: all 0.3s ease;
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+.file-upload-area:hover,
+.file-upload-area.dragging {
+  border-color: #4f46e5;
+  background: #f5f3ff;
+}
+
+.file-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.upload-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.upload-content i {
+  font-size: 2rem;
+  color: #4f46e5;
+}
+
+.upload-content p {
+  margin: 0;
+  font-weight: 500;
+  color: #374151;
+}
+
+.file-types {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.selected-files {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  gap: 0.5rem;
+}
+
+.file-item i {
+  color: #4f46e5;
+}
+
+.file-name {
+  flex: 1;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.remove-file {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.remove-file:hover {
+  background: #fee2e2;
 }
 
 /* Add these new animation styles */
@@ -569,6 +1224,7 @@ select {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -580,6 +1236,7 @@ select {
     opacity: 0;
     transform: translateY(40px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -590,9 +1247,11 @@ select {
   0% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.5;
   }
+
   100% {
     opacity: 1;
   }
@@ -604,6 +1263,7 @@ select {
     opacity: 0;
     transform: translateX(-20px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);

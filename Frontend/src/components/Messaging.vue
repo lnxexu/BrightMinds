@@ -45,6 +45,15 @@
       </div>
       <button type="submit" class="send-button">
         <i class="fas fa-paper-plane"></i>
+
+
+
+
+
+
+
+
+
       </button>
     </form>
   </div>
@@ -52,6 +61,26 @@
 
 <script>
 import { ref, onMounted, nextTick } from "vue";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export default {
   name: "MessagingComponent",
@@ -80,6 +109,10 @@ export default {
     const newMessage = ref("");
     const messageContainer = ref(null);
 
+
+
+
+
     const scrollToBottom = async () => {
       await nextTick();
       if (messageContainer.value) {
@@ -102,10 +135,14 @@ export default {
 
     onMounted(scrollToBottom);
 
+
     return { messages, newMessage, sendMessage, messageContainer };
   },
 };
 </script>
+
+
+
 
 <style scoped>
 .messaging-container {
@@ -132,6 +169,18 @@ export default {
   margin: 0;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
 .active-status {
   display: flex;
   align-items: center;
@@ -139,12 +188,29 @@ export default {
   font-size: 0.875rem;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 .status-dot {
   width: 8px;
   height: 8px;
   background: #22c55e;
   border-radius: 50%;
   display: inline-block;
+
+
+
 }
 
 .messages-section {
@@ -175,11 +241,14 @@ export default {
 
 .outgoing .message-content {
   background: #4f46e5;
+
   color: white;
 }
 
 .outgoing .message-info {
   color: rgba(255, 255, 255, 0.9);
+
+
 }
 
 .message-info {
@@ -208,6 +277,8 @@ export default {
 .outgoing .avatar {
   background: #4f46e5;
   color: white;
+
+
 }
 
 .message-form {
@@ -216,6 +287,7 @@ export default {
   gap: 1rem;
   background: white;
   border-top: 1px solid #e5e7eb;
+
 }
 
 .input-wrapper {
