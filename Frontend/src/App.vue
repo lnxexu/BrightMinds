@@ -1,6 +1,3 @@
-
-Earl
-Earl D. Ang
 <template>
   <div id="app" class="min-h-screen flex flex-col bg-gradient">
     <header class="header">
@@ -12,7 +9,7 @@ Earl D. Ang
             <span>Bright <span class="text-gradient">Minds</span></span>
           </router-link>
         </div>
-        
+
         <!-- Navigation Links - Only Visible When Logged In -->
         <nav v-if="isLoggedIn" class="nav-links">
           <router-link to="/courses" class="nav-link">
@@ -55,7 +52,7 @@ Earl D. Ang
               <img :src="userAvatar" alt="User Avatar" class="avatar" />
               <span class="username">{{ username }}</span>
               <i class="fas fa-chevron-down"></i>
-              
+
               <!-- Dropdown Menu -->
               <div v-show="showProfileMenu" class="profile-dropdown">
                 <router-link to="/profile" class="dropdown-item">
@@ -89,7 +86,9 @@ Earl D. Ang
 
     <footer class="footer">
       <div class="footer-content">
-        <p class="copyright">© 2025 Bright Minds Elementary School. All Rights Reserved.</p>
+        <p class="copyright">
+          © 2025 Bright Minds Elementary School. All Rights Reserved.
+        </p>
         <div class="social-links">
           <a href="#" class="social-link">
             <i class="fab fa-facebook-f"></i>
@@ -107,52 +106,52 @@ Earl D. Ang
 </template>
 
 <script>
-import { mapState } from 'vuex'
+import { mapState } from "vuex";
 
 export default {
   name: "App",
   data() {
     return {
       showProfileMenu: false,
-      userAvatar: '/default-avatar.png', // Add a default avatar path
-      username: 'User' // Add a default username
-    }
+      userAvatar: "/default-avatar.png", // Add a default avatar path
+      username: "User", // Add a default username
+    };
   },
   computed: {
     ...mapState({
-      isLoggedIn: state => state.isLoggedIn
-    })
+      isLoggedIn: (state) => state.isLoggedIn,
+    }),
   },
   methods: {
     toggleProfileMenu() {
-      this.showProfileMenu = !this.showProfileMenu
+      this.showProfileMenu = !this.showProfileMenu;
     },
     logout() {
-      this.$store.dispatch('logout')
-      this.showProfileMenu = false
-      this.$router.push('/login')
-    }
+      this.$store.dispatch("logout");
+      this.showProfileMenu = false;
+      this.$router.push("/login");
+    },
   },
   created() {
-  // Check auth state when app loads
-  this.$store.dispatch('checkAuthState').then(() => {
-    // If user is on a protected route and not logged in, redirect to login
-    if (this.$route.meta.requiresAuth && !this.isLoggedIn) {
-      this.$router.push('/login');
-    }
-    // If user is on a guest route and logged in, redirect to home
-    else if (this.$route.meta.requiresGuest && this.isLoggedIn) {
-      this.$router.push('/');
-    }
-  });
+    // Check auth state when app loads
+    this.$store.dispatch("checkAuthState").then(() => {
+      // If user is on a protected route and not logged in, redirect to login
+      if (this.$route.meta.requiresAuth && !this.isLoggedIn) {
+        this.$router.push("/login");
+      }
+      // If user is on a guest route and logged in, redirect to home
+      else if (this.$route.meta.requiresGuest && this.isLoggedIn) {
+        this.$router.push("/");
+      }
+    });
 
-  // Retrieve the user's first name from localStorage
-  const storedUser = localStorage.getItem('user');
-  if (storedUser) {
-    const user = JSON.parse(storedUser);
-    this.username = user.user_metadata?.full_name?.split(' ')[0] || 'User';
-  }
-}
+    // Retrieve the user's first name from localStorage
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      this.username = user.user_metadata?.full_name?.split(" ")[0] || "User";
+    }
+  },
 };
 </script>
 <style>
@@ -169,7 +168,7 @@ export default {
 
 /* Global styles */
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   margin: 0;
   padding: 0;
@@ -216,7 +215,9 @@ body {
 }
 
 .text-gradient {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  background: linear-gradient(135deg,
+      var(--primary) 0%,
+      var(--primary-light) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -303,6 +304,7 @@ body {
 .auth-button.register:hover {
   background: var(--primary-dark);
 }
+
 .user-profile {
   position: relative;
   display: flex;
@@ -376,7 +378,7 @@ body {
   .username {
     display: none;
   }
-  
+
   .user-profile {
     padding: 0.5rem;
   }

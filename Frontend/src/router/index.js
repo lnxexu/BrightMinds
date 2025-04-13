@@ -12,8 +12,6 @@ import SettingsView from '@/components/SettingsView.vue';
 import RoleSelection from '@/components/RoleSelection.vue';
 import TeacherRegisterForm from '@/components/TeacherRegisterForm.vue';
 import Stream from '@/components/Stream.vue';
-
-
 import store from '@/store';
 
 

@@ -36,19 +36,11 @@
 
     <!-- Add topic button that will show a modal -->
     <!-- Add this after the Course Info Card and before the Topics List -->
-<div class="action-buttons">
-  <button @click="showTopicMaterial({})" class="action-btn add-btn">
-    <i class="fas fa-plus"></i> Add Topic
-  </button>
-  <button 
-    @click="handleModifyTopic(selectedTopic)" 
-    class="action-btn edit-btn"
-    v-if="selectedTopic"
-  >
-    <i class="fas fa-edit"></i> Modify Topic
-  </button>
-</div>
-
+    <div class="action-buttons">
+      <button @click="showTopicMaterial({})" class="action-btn add-btn">
+        <i class="fas fa-plus"></i> Add Topic
+      </button>
+    </div>
 
     <!-- Add topic Modal -->
     <div
@@ -58,11 +50,11 @@
     >
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-  <h3>{{ selectedTopic?.id ? 'Modify Topic' : 'Add New Topic' }}</h3>
-  <button class="close-button" @click="closeAddTopicModal">
-    <i class="fas fa-times"></i>
-  </button>
-</div>
+          <h3>{{ selectedTopic?.id ? "Modify Topic" : "Add New Topic" }}</h3>
+          <button class="close-button" @click="closeAddTopicModal">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
         <div class="modal-body">
           <form @submit.prevent="handleAddTopic" class="topic-form">
             <div class="form-group">
@@ -77,15 +69,25 @@
             </div>
             <div class="form-group">
               <label for="gradeLevel">Grade Level</label>
-              <input
-                id="gradeLevel"
-                v-model="newTopic.grade_level"
-                type="number"
-                required
-                min="1"
-                max="12"
-                placeholder="Enter grade level"
-              />
+              <div class="select-wrapper">
+                <select
+                  id="gradeLevel"
+                  v-model="newTopic.grade_level"
+                  required
+                  class="form-select"
+                >
+                  <option value="" disabled selected>Select grade level</option>
+                  <option value="K">Kinder</option>
+                  <option
+                    v-for="grade in availableGrades"
+                    :key="grade"
+                    :value="grade"
+                  >
+                    Grade {{ grade }}
+                  </option>
+                </select>
+                <i class="fas fa-chevron-down"></i>
+              </div>
             </div>
             <div class="form-group">
               <label for="topicContent">Topic Content</label>
@@ -114,6 +116,19 @@
                     >
                   </div>
                 </div>
+                <div class="form-group">
+                  <label for="topicDescription">Description (Optional)</label>
+                  <textarea
+                    id="topicDescription"
+                    v-model="newTopic.description"
+                    placeholder="Enter topic description"
+                    rows="3"
+                  ></textarea>
+                  <small class="helper-text"
+                    >Provide additional details about this topic to help users
+                    identify it.</small
+                  >
+                </div>
                 <!-- Preview uploaded files -->
                 <div v-if="selectedFiles.length" class="selected-files">
                   <div
@@ -131,11 +146,15 @@
               </div>
             </div>
             <div class="form-actions">
-              <button type="submit" class="btn-submit">Add Topic</button>
+              <button type="submit" class="btn-submit" :disabled="isSubmitting">
+                <i v-if="isSubmitting" class="fas fa-spinner fa-spin"></i>
+                {{ isSubmitting ? "Adding..." : "Add Topic" }}
+              </button>
               <button
                 type="button"
                 class="btn-cancel"
                 @click="closeAddTopicModal"
+                :disabled="isSubmitting"
               >
                 Cancel
               </button>
@@ -165,7 +184,12 @@
           </div>
           <div class="topic-content">
             <h4 class="topic-title">{{ topic.topic_name }}</h4>
-            <span class="topic-grade">Grade {{ topic.grade_level }}</span>
+            <span class="topic-grade">{{
+              topic.grade_level === "Kindergarten"
+                ? "Kindergarten"
+                : `Grade
+              ${topic.grade_level}`
+            }}</span>
           </div>
         </div>
       </TransitionGroup>
@@ -173,51 +197,66 @@
 
     <Transition name="modal">
       <!-- Replace the existing modal content -->
-<div v-if="showModal" class="modal-overlay" @click="closeModal">
-  <div class="modal-content" @click.stop>
-    <div class="modal-header">
-      <h3>
-        {{ selectedTopic?.topic_name }} - Grade {{ selectedTopic?.grade_level }}
-      </h3>
-      <div class="modal-actions">
-        <button @click="handleModifyTopic(selectedTopic)" class="action-btn edit-btn">
-          <i class="fas fa-edit"></i> Edit Topic
-        </button>
-        <button class="close-button" @click="closeModal">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-    </div>
-    <div class="modal-body">
-      <div v-if="topicMaterial" class="material-content">
-        <div v-if="topicMaterial?.materials" class="material-files">
-          <h4>Topic Materials:</h4>
-          <div class="files-grid">
-            <a
-              v-for="file in topicMaterial.materials"
-              :key="file.url"
-              :href="file.url"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="file-link"
-            >
-              <i :class="getFileIcon(file.type)"></i>
-              <span>{{ file.name }}</span>
-              <span class="file-size">({{ formatFileSize(file.size) }})</span>
-            </a>
+      <div v-if="showModal" class="modal-overlay" @click="closeModal">
+        <div class="modal-content" @click.stop>
+          <div class="modal-header">
+            <h3>
+              {{ selectedTopic?.topic_name }} ({{
+                selectedTopic?.grade_level === "Kindergarten"
+                  ? "Kindergarten"
+                  : `Grade ${selectedTopic?.grade_level}`
+              }})
+            </h3>
+            <div class="modal-actions">
+              <button
+                @click="handleModifyTopic(selectedTopic)"
+                class="action-btn edit-btn"
+              >
+                <i class="fas fa-edit"></i> Edit Topic
+              </button>
+              <button
+                @click="showDeleteConfirmation"
+                class="action-btn delete-btn"
+              >
+                <i class="fas fa-trash"></i> Delete Topic
+              </button>
+              <button class="close-button" @click="closeModal">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+          <div class="modal-body">
+            <div v-if="topicMaterial" class="material-content">
+              <div v-if="topicMaterial?.materials" class="material-files">
+                <h4>Topic Materials:</h4>
+                <div class="files-grid">
+                  <a
+                    v-for="file in topicMaterial.materials"
+                    :key="file.url"
+                    :href="file.url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="file-link"
+                  >
+                    <i :class="getFileIcon(file.type)"></i>
+                    <span>{{ file.name }}</span>
+                    <span class="file-size"
+                      >({{ formatFileSize(file.size) }})</span
+                    >
+                  </a>
+                </div>
+              </div>
+              <div v-else class="no-materials">
+                <p>No materials available for this topic.</p>
+              </div>
+            </div>
+            <div v-else class="loading-state">
+              <i class="fas fa-spinner fa-spin"></i>
+              <p>Loading material...</p>
+            </div>
           </div>
         </div>
-        <div v-else class="no-materials">
-          <p>No materials available for this topic.</p>
-        </div>
       </div>
-      <div v-else class="loading-state">
-        <i class="fas fa-spinner fa-spin"></i>
-        <p>Loading material...</p>
-      </div>
-    </div>
-  </div>
-</div>
     </Transition>
 
     <router-link to="/courses" class="back-button animate-fade-in">
@@ -228,15 +267,67 @@
     <i class="fas fa-spinner fa-spin"></i>
     <p>Loading course details...</p>
   </div>
+  
+  <Transition name="modal">
+    <div v-if="showDeleteModal" class="modal-overlay" @click="closeDeleteModal">
+      <div class="modal-content delete-confirmation" @click.stop>
+        <div class="modal-header">
+          <h3>Delete Topic</h3>
+          <button class="close-button" @click="closeDeleteModal">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="delete-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            This action cannot be undone. To confirm deletion, please type the
+            topic name below:
+          </p>
+          <div class="form-group">
+            <input
+              v-model="deleteConfirmation"
+              type="text"
+              class="form-input"
+              :placeholder="selectedTopic?.topic_name"
+            />
+          </div>
+          <div class="form-actions">
+            <button
+              @click="handleDeleteTopic"
+              class="btn-delete"
+              :disabled="deleteConfirmation !== selectedTopic?.topic_name"
+            >
+              <i v-if="isDeleting" class="fas fa-spinner fa-spin"></i>
+              {{ isDeleting ? "Deleting..." : "Delete Topic" }}
+            </button>
+            <button
+              type="button"
+              class="btn-cancel"
+              @click="closeDeleteModal"
+              :disabled="isDeleting"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Transition>
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { useRoute } from "vue-router";
 import { supabase } from "../lib/supabaseClient";
+import { useToast } from "vue-toastification";
 
+const showDeleteModal = ref(false);
+const deleteConfirmation = ref("");
+const isDeleting = ref(false);
+const fileInput = ref(null);
+const dragover = ref(false);
+const selectedFiles = ref([]);
 const route = useRoute();
-const router = useRouter();
 const course = ref(null);
 const selectedGrade = ref("all");
 const topics = ref([]);
@@ -244,23 +335,74 @@ const showModal = ref(false);
 const selectedTopic = ref(null);
 const topicMaterial = ref(null);
 const showAddTopicModal = ref(false);
+const isSubmitting = ref(false);
+const toast = useToast();
 const newTopic = ref({
   topic_name: "",
   grade_level: "",
   content: "",
+  description: "",
 });
-const fileInput = ref(null);
-const dragover = ref(false);
-const selectedFiles = ref([]);
 
+const showDeleteConfirmation = () => {
+  showDeleteModal.value = true;
+  showModal.value = false;
+  deleteConfirmation.value = "";
+};
+
+const closeDeleteModal = () => {
+  showDeleteModal.value = false;
+  deleteConfirmation.value = "";
+};
+
+const handleDeleteTopic = async () => {
+  if (
+    !selectedTopic.value ||
+    deleteConfirmation.value !== selectedTopic.value.topic_name
+  ) {
+    return;
+  }
+
+  try {
+    isDeleting.value = true;
+
+    // Delete associated materials first
+    if (topicMaterial.value?.materials) {
+      for (const material of topicMaterial.value.materials) {
+        const filePath = material.url.split("/").pop();
+        await supabase.storage
+          .from("materials")
+          .remove([`${selectedTopic.value.id}/${filePath}`]);
+      }
+    }
+
+    // Delete the topic
+    const { error } = await supabase
+      .from("topics")
+      .delete()
+      .eq("id", selectedTopic.value.id);
+
+    if (error) throw error;
+
+    toast.success("Topic deleted successfully");
+    closeDeleteModal();
+    closeModal();
+    await fetchCourseDetails();
+  } catch (error) {
+    console.error("Error deleting topic:", error);
+    toast.error(error.message || "Error deleting topic");
+  } finally {
+    isDeleting.value = false;
+  }
+};
 
 const formatFileSize = (bytes) => {
-  if (!bytes) return '0 Bytes';
-  
+  if (!bytes) return "0 Bytes";
+
   const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const sizes = ["Bytes", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
+
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 };
 
@@ -278,14 +420,14 @@ const fetchTopicMaterial = async () => {
     if (data?.materials && Array.isArray(data.materials)) {
       return data;
     }
-    
+
     // If materials is a string, try to parse it
-    if (data?.materials && typeof data.materials === 'string') {
+    if (data?.materials && typeof data.materials === "string") {
       try {
         const parsedMaterials = JSON.parse(data.materials);
         return { materials: parsedMaterials };
       } catch (e) {
-        console.error('Error parsing materials:', e);
+        console.error("Error parsing materials:", e);
       }
     }
 
@@ -355,16 +497,18 @@ const handleAddTopic = async () => {
     }
 
     let topicData;
-    
+    const topicPayload = {
+      topic_name: newTopic.value.topic_name.trim(),
+      grade_level: newTopic.value.grade_level,
+      course: course.value.name,
+      description: newTopic.value.description, // Add this line
+    };
+
     if (newTopic.value.id) {
       // Update existing topic
       const { data, error: topicError } = await supabase
         .from("topics")
-        .update({
-          topic_name: newTopic.value.topic_name.trim(),
-          grade_level: newTopic.value.grade_level,
-          course: course.value.name,
-        })
+        .update(topicPayload)
         .eq("id", newTopic.value.id)
         .select()
         .single();
@@ -375,11 +519,7 @@ const handleAddTopic = async () => {
       // Insert new topic
       const { data, error: topicError } = await supabase
         .from("topics")
-        .insert([{
-          topic_name: newTopic.value.topic_name.trim(),
-          grade_level: newTopic.value.grade_level,
-          course: course.value.name,
-        }])
+        .insert([topicPayload])
         .select()
         .single();
 
@@ -392,7 +532,9 @@ const handleAddTopic = async () => {
       const uploadedUrls = await Promise.all(
         selectedFiles.value.map(async (file) => {
           const fileExt = file.name.split(".").pop();
-          const safeFileName = `${topicData.id}/${Date.now()}-${file.name.replace(
+          const safeFileName = `${
+            topicData.id
+          }/${Date.now()}-${file.name.replace(
             /[^a-zA-Z0-9.-]/g,
             "_"
           )}.${fileExt}`;
@@ -435,6 +577,20 @@ const handleAddTopic = async () => {
       if (materialError) throw materialError;
     }
 
+    // Show success message
+    toast.success(
+      newTopic.value.id
+        ? "Topic updated successfully!"
+        : "Topic added successfully!",
+      {
+        position: "top-right",
+        timeout: 3000,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      }
+    );
+
     // Reset form and close modal
     resetForm();
     showAddTopicModal.value = false;
@@ -453,6 +609,7 @@ const resetForm = () => {
     topic_name: "",
     grade_level: "",
     content: "",
+    description: "",
   };
   selectedFiles.value = [];
 };
@@ -489,10 +646,10 @@ const closeModal = () => {
 
 const handleModifyTopic = async (topic) => {
   if (!topic) return;
-  
+
   // Close the view modal
   showModal.value = false;
-  
+
   // Pre-fill the form with existing topic data
   newTopic.value = {
     id: topic.id,
@@ -500,14 +657,14 @@ const handleModifyTopic = async (topic) => {
     grade_level: topic.grade_level,
     content: topic.content || "",
   };
-  
+
   // Get existing materials
   const material = await fetchTopicMaterial(topic.id);
   if (material?.materials) {
     // Store existing materials for reference
     newTopic.value.existingMaterials = material.materials;
   }
-  
+
   showAddTopicModal.value = true;
 };
 
@@ -543,19 +700,28 @@ const fetchCourseDetails = async () => {
   }
 };
 
-// Computed properties
-const uniqueGrades = computed(() => {
-  // use supabase to get unique grades from topics
+// Add this computed property after your existing computed properties
+const availableGrades = computed(() => {
+  // Generate array of grades 1-12
+  return Array.from({ length: 6 }, (_, i) => i + 1);
+});
 
-  console.log("topics", topics.value);
-  const grades = topics.value.map((topic) => topic.grade_level);
-  return [...new Set(grades)].sort((a, b) => a - b);
+const uniqueGrades = computed(() => {
+  if (!topics.value?.length) return [];
+  const grades = new Set(topics.value.map((topic) => topic.grade_level));
+  return Array.from(grades).sort((a, b) => {
+    if (a === "K") return -1;
+    if (b === "K") return 1;
+    return a - b;
+  });
 });
 
 const filteredTopics = computed(() => {
   if (!topics.value?.length) return [];
   if (selectedGrade.value === "all") return topics.value;
-  return topics.value.filter((topic) => topic.grade == selectedGrade.value);
+  return topics.value.filter(
+    (topic) => topic.grade_level === selectedGrade.value
+  );
 });
 
 onMounted(() => {
@@ -736,6 +902,7 @@ select {
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
   border-color: #d1d5db;
 }
+
 .file-link {
   display: flex;
   align-items: center;
@@ -964,6 +1131,9 @@ select {
   border: 1px solid #e5e7eb;
   font-size: 1rem;
   width: 100%;
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
 }
 
 .form-group textarea {
@@ -1031,6 +1201,18 @@ select {
 .material-files h4 {
   margin-bottom: 1rem;
   color: #374151;
+}
+
+.helper-text {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+.form-group textarea:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
 }
 
 .files-grid {
@@ -1216,6 +1398,107 @@ select {
 
 .modal-enter-from .modal-content {
   transform: translateY(20px);
+}
+
+.form-select {
+  width: 100%;
+  padding: 0.75rem 2.5rem 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  font-size: 1rem;
+  cursor: pointer;
+  appearance: none;
+  background-color: white;
+  color: #1f2937;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+}
+
+.form-group .select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.form-group .select-wrapper i {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #4f46e5;
+  pointer-events: none;
+  transition: transform 0.3s ease;
+}
+
+.form-group .select-wrapper:hover i {
+  transform: translateY(-50%) translateY(1px);
+}
+
+.delete-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.delete-btn:hover {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-2px);
+}
+
+.delete-confirmation {
+  max-width: 500px;
+}
+
+.delete-warning {
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.delete-warning i {
+  font-size: 1.25rem;
+}
+
+.btn-delete {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #dc2626;
+  color: white;
+  border: none;
+}
+
+.btn-delete:disabled {
+  background: #f87171;
+  cursor: not-allowed;
+}
+
+.btn-delete:not(:disabled):hover {
+  background: #b91c1c;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  font-size: 1rem;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.form-input:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.1);
 }
 
 /* Animation keyframes */
