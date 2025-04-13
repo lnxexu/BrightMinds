@@ -9,7 +9,6 @@ import LoginForm from "@/components/LoginForm.vue";
 import RegisterForm from "@/components/RegisterForm.vue";
 import ProfileView from '@/components/ProfileView.vue';
 import SettingsView from '@/components/SettingsView.vue';
-import Quiz from '@/components/Quiz.vue';
 import store from '@/store';
 
 
@@ -18,6 +17,18 @@ const routes = [
     path: "/", 
     name: 'Home',
     component: Home 
+  },
+  { path: '/role-selection', 
+    name: 'RoleSelection', 
+    component: RoleSelection 
+  },
+  { path: '/register', 
+    name: 'Register', 
+    component: RegisterForm 
+  },
+  { path: '/register-teacher', 
+    name: 'TeacherRegister', 
+    component: TeacherRegisterForm 
   },
   { 
     path: "/courses", 

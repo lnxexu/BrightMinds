@@ -134,18 +134,25 @@ export default {
     }
   },
   created() {
-    // Check auth state when app loads
-    this.$store.dispatch('checkAuthState').then(() => {
-      // If user is on a protected route and not logged in, redirect to login
-      if (this.$route.meta.requiresAuth && !this.isLoggedIn) {
-        this.$router.push('/login');
-      }
-      // If user is on a guest route and logged in, redirect to home
-      else if (this.$route.meta.requiresGuest && this.isLoggedIn) {
-        this.$router.push('/');
-      }
-    });
+  // Check auth state when app loads
+  this.$store.dispatch('checkAuthState').then(() => {
+    // If user is on a protected route and not logged in, redirect to login
+    if (this.$route.meta.requiresAuth && !this.isLoggedIn) {
+      this.$router.push('/login');
+    }
+    // If user is on a guest route and logged in, redirect to home
+    else if (this.$route.meta.requiresGuest && this.isLoggedIn) {
+      this.$router.push('/');
+    }
+  });
+
+  // Retrieve the user's first name from localStorage
+  const storedUser = localStorage.getItem('user');
+  if (storedUser) {
+    const user = JSON.parse(storedUser);
+    this.username = user.user_metadata?.full_name?.split(' ')[0] || 'User';
   }
+}
 };
 </script>
 <style>
