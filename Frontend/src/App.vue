@@ -1,16 +1,8 @@
 <template>
   <div id="app" class="min-h-screen flex flex-col bg-gradient">
-    <!-- Global Toast that persists across navigation -->
-    <Toast
-      v-if="showToast"
-      :message="toastMessage"
-      :type="toastType"
-      @close="showToast = false"
-    />
-
     <header class="header">
       <div class="navbar">
-        <!-- Logo - Always Visible -->
+        <!-- Logo -->
         <div class="logo">
           <router-link to="/" class="logo-link">
             <i class="fas fa-graduation-cap"></i>
@@ -18,87 +10,29 @@
           </router-link>
         </div>
 
-        <!-- Navigation Links - Only Visible When Logged In -->
+        <!-- Nav Links -->
         <nav v-if="isLoggedIn" class="nav-links">
-          <router-link to="/courses" class="nav-link">
-            <i class="fas fa-book"></i>
-            <span>Courses</span>
-          </router-link>
-          <router-link to="/messages" class="nav-link">
-            <i class="fas fa-comments"></i>
-            <span>Messaging</span>
-          </router-link>
-          <router-link to="/quiz-creator" class="nav-link">
-            <i class="fas fa-tasks"></i>
-            <span>Quiz Creator</span>
-          </router-link>
-          <router-link to="/parent" class="nav-link">
-            <i class="fas fa-user-shield"></i>
-            <span>Parent Dashboard</span>
-          </router-link>
+          <router-link to="/courses" class="nav-link"><i class="fas fa-book"></i><span>Courses</span></router-link>
+          <router-link to="/messages" class="nav-link"><i class="fas fa-comments"></i><span>Messaging</span></router-link>
+          <router-link to="/quiz-creator" class="nav-link"><i class="fas fa-tasks"></i><span>Quiz Creator</span></router-link>
+          <router-link to="/parent" class="nav-link"><i class="fas fa-user-shield"></i><span>Parent Dashboard</span></router-link>
         </nav>
 
         <!-- Auth Buttons -->
         <div class="nav-buttons">
           <template v-if="!isLoggedIn">
-            <router-link to="/login" class="auth-button login">
-              <i class="fas fa-sign-in-alt"></i>
-              <span>Login</span>
-            </router-link>
-            <router-link to="/register" class="auth-button register">
-              <i class="fas fa-user-plus"></i>
-              <span>Register</span>
-            </router-link>
+            <router-link to="/login" class="auth-button login"><i class="fas fa-sign-in-alt"></i><span>Login</span></router-link>
+            <router-link to="/register" class="auth-button register"><i class="fas fa-user-plus"></i><span>Register</span></router-link>
           </template>
           <template v-else>
-            <!-- User Profile Dropdown -->
-            <div class="user-profile">
-              <button
-                @click="toggleProfileMenu"
-                @keydown.escape="showProfileMenu = false"
-                class="profile-button"
-                aria-haspopup="true"
-                :aria-expanded="showProfileMenu"
-              >
-                <img :src="userAvatar" alt="User Avatar" class="avatar" />
-                <span class="username">{{ username }}</span>
-                <i class="fas fa-chevron-down"></i>
-              </button>
-
-              <!-- Dropdown Menu -->
-              <div
-                v-if="showProfileMenu"
-                class="profile-dropdown"
-                role="menu"
-                @keydown.escape="showProfileMenu = false"
-              >
-                <router-link
-                  to="/profile"
-                  class="dropdown-item"
-                  role="menuitem"
-                  @keydown.esc="showProfileMenu = false"
-                >
-                  <i class="fas fa-user"></i>
-                  My Profile
-                </router-link>
-                <router-link
-                  to="/settings"
-                  class="dropdown-item"
-                  role="menuitem"
-                  @keydown.esc="showProfileMenu = false"
-                >
-                  <i class="fas fa-cog"></i>
-                  Settings
-                </router-link>
-                <button
-                  @click="logout"
-                  class="dropdown-item logout"
-                  role="menuitem"
-                  @keydown.esc="showProfileMenu = false"
-                >
-                  <i class="fas fa-sign-out-alt"></i>
-                  Logout
-                </button>
+            <div class="user-profile" @click="toggleProfileMenu">
+              <img :src="userAvatar" alt="User Avatar" class="avatar" />
+              <span class="username">{{ username }}</span>
+              <i class="fas fa-chevron-down"></i>
+              <div v-show="showProfileMenu" class="profile-dropdown">
+                <router-link to="/profile" class="dropdown-item"><i class="fas fa-user"></i>My Profile</router-link>
+                <router-link to="/settings" class="dropdown-item"><i class="fas fa-cog"></i>Settings</router-link>
+                <button @click="logout" class="dropdown-item logout"><i class="fas fa-sign-out-alt"></i>Logout</button>
               </div>
             </div>
           </template>
@@ -109,134 +43,124 @@
     <main class="main-content">
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
-          <div>
-            <component :is="Component" />
-          </div>
+          <div><component :is="Component" /></div>
         </transition>
       </router-view>
+
+      <!-- Floating Chat Head -->
+      <div v-if="isLoggedIn && $route.path !== '/messages'" class="chat-head">
+        <button class="chat-toggle" @click="toggleChatHead">
+          <i class="fas fa-comments"></i>
+          <span v-if="hasUnreadMessage && !showChat" class="notification-dot"></span>
+        </button>
+        <MessagingComponent
+          v-if="showChat"
+          class="chat-box"
+          v-model="chatRecipient"
+          @opened="clearUnread"
+        />
+      </div>
     </main>
 
     <footer class="footer">
       <div class="footer-content">
-        <p class="copyright">
-          2025 Bright Minds Elementary School. All Rights Reserved.
-        </p>
+        <p class="copyright">© 2025 Bright Minds Elementary School. All Rights Reserved.</p>
         <div class="social-links">
-          <a href="#" class="social-link">
-            <i class="fab fa-facebook-f"></i>
-          </a>
-          <a href="#" class="social-link">
-            <i class="fab fa-twitter"></i>
-          </a>
-          <a href="#" class="social-link">
-            <i class="fab fa-instagram"></i>
-          </a>
+          <a href="#" class="social-link"><i class="fab fa-facebook-f"></i></a>
+          <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
+          <a href="#" class="social-link"><i class="fab fa-instagram"></i></a>
         </div>
       </div>
     </footer>
   </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
-import { useStore } from "vuex";
-import { useRouter, useRoute } from "vue-router";
-import { supabase } from "./lib/supabaseClient.js";
-import Toast from "./components/Toast.vue";
+<script>
+import { mapState } from 'vuex'
+import { supabase } from '@/lib/supabaseClient'
+import MessagingComponent from '@/components/MessagingComponent.vue'
 
-const store = useStore();
-const router = useRouter();
-const route = useRoute();
-
-const showProfileMenu = ref(false);
-const showToast = ref(false);
-const toastMessage = ref("");
-const toastType = ref("info");
-const userAvatar = ref("/default-avatar.png");
-
-// Get first name from supaba
-const username = computed(() => {
-  const user = store.state.currentUser;
-  return user?.firstName || "User";
-});
-
-// Compute login state
-const isLoggedIn = computed(() => store.state.isLoggedIn);
-
-// Toggle profile menu
-const toggleProfileMenu = () => {
-  showProfileMenu.value = !showProfileMenu.value;
-};
-
-// Handle click outside to close menu
-const handleClickOutside = (event) => {
-  const profileEl = event.target.closest('.user-profile');
-  if (showProfileMenu.value && !profileEl) {
-    showProfileMenu.value = false;
-  }
-};
-
-const handleKeyDown = (event) => {
-  if (event.key === 'Escape' && showProfileMenu.value) {
-    showProfileMenu.value = false;
-  }
-};
-
-// Add click outside listener
-onMounted(() => {
-  document.addEventListener("click", handleClickOutside);
-  document.addEventListener('keydown', handleKeyDown);
-
-  // Check auth state when app loads
-  store.dispatch("checkAuthState").then(() => {
-    // If user is on a protected route and not logged in, redirect to login
-    if (route.meta.requiresAuth && !isLoggedIn.value) {
-      router.push("/login");
+export default {
+  name: "App",
+  components: { MessagingComponent },
+  data() {
+    return {
+      showProfileMenu: false,
+      userAvatar: '/default-avatar.png',
+      username: 'User',
+      chatRecipient: '',
+      showChat: false,
+      hasUnreadMessage: false,
+      currentUserId: null,
+      messageSubscription: null
     }
-    // If user is on a guest route and logged in, redirect to home
-    else if (route.meta.requiresGuest && isLoggedIn.value) {
-      router.push("/");
+  },
+  computed: {
+    ...mapState({
+      isLoggedIn: state => state.isLoggedIn
+    })
+  },
+  methods: {
+    toggleProfileMenu() {
+      this.showProfileMenu = !this.showProfileMenu
+    },
+    toggleChatHead() {
+      this.showChat = !this.showChat
+      if (this.showChat) this.clearUnread()
+    },
+    clearUnread() {
+      this.hasUnreadMessage = false
+    },
+    logout() {
+      this.$store.dispatch('logout')
+      this.showProfileMenu = false
+      this.$router.push('/login')
+    },
+    listenForMessages() {
+      this.messageSubscription = supabase
+        .channel('messages')
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages'
+        }, (payload) => {
+          const msg = payload.new
+          if (msg.recipient_id === this.currentUserId && this.$route.path !== '/messages' && !this.showChat) {
+            this.hasUnreadMessage = true
+          }
+        })
+        .subscribe()
     }
-  });
-});
+  },
+  async created() {
+    const { data, error } = await supabase.auth.getUser()
+    if (data?.user) {
+      this.currentUserId = data.user.id
+      this.listenForMessages()
+    }
 
-onUnmounted(() => {
-  document.removeEventListener("click", handleClickOutside);
-  document.removeEventListener('keydown', handleKeyDown);
-});
-
-// Global toast handler
-const showGlobalToast = (message, type = "success") => {
-  toastMessage.value = message;
-  toastType.value = type;
-  showToast.value = true;
-};
-
-// Listen for global events
-store.subscribe((mutation, state) => {
-  if (mutation.type === "setLoggedIn" && state.isLoggedIn) {
-    showGlobalToast("Login successful!", "success");
-  } else if (mutation.type === "setError" && state.error) {
-    showGlobalToast(state.error, "error");
+    this.$store.dispatch('checkAuthState').then(() => {
+      if (this.$route.meta.requiresAuth && !this.isLoggedIn) {
+        this.$router.push('/login')
+      } else if (this.$route.meta.requiresGuest && this.isLoggedIn) {
+        this.$router.push('/')
+      }
+    })
+  },
+  unmounted() {
+    if (this.messageSubscription) {
+      this.messageSubscription.unsubscribe()
+    }
   }
-});
-
-// Logout handler
-const logout = async () => {
-  try {
-    await store.dispatch("logout");
-    showGlobalToast("Successfully logged out");
-    showProfileMenu.value = false;
-    router.push("/login");
-  } catch (error) {
-    console.error("Logout error:", error);
-  }
-};
+}
 </script>
 
+
 <style>
+
+
 /* Modern color variables */
-* {
+:root {
   --primary: #4f46e5;
   --primary-light: #818cf8;
   --primary-dark: #4338ca;
@@ -248,7 +172,7 @@ const logout = async () => {
 
 /* Global styles */
 body {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   margin: 0;
   padding: 0;
@@ -266,24 +190,6 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
-}
-
-.profile-button {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  border: none;
-  background: transparent;
-  border-radius: 12px;
-  transition: all 0.3s ease;
-}
-
-.profile-button:hover,
-.profile-button:focus {
-  background: rgba(79, 70, 229, 0.08);
-  outline: none;
 }
 
 .navbar {
@@ -313,11 +219,7 @@ body {
 }
 
 .text-gradient {
-  background: linear-gradient(
-    135deg,
-    var(--primary) 0%,
-    var(--primary-light) 100%
-  );
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -436,43 +338,40 @@ body {
   top: 100%;
   right: 0;
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   min-width: 200px;
-  z-index: 1000;
-  margin-top: 8px;
+  margin-top: 0.5rem;
+  z-index: 100;
 }
 
 .dropdown-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  color: #333;
+  gap: 0.75rem;
+  padding: 1rem;
+  color: var(--text-secondary);
   text-decoration: none;
-  transition: background-color 0.2s;
-  cursor: pointer;
-  border: none;
-  background: none;
-  width: 100%;
-  text-align: left;
+  transition: all 0.3s ease;
 }
 
 .dropdown-item:hover {
-  background-color: #f5f5f5;
-}
-
-.dropdown-item i {
-  width: 20px;
+  background: rgba(79, 70, 229, 0.08);
+  color: var(--primary);
 }
 
 .dropdown-item.logout {
-  color: #f44336;
-  border-top: 1px solid #eee;
+  border-top: 1px solid #e5e7eb;
+  color: #ef4444;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
 }
 
 .dropdown-item.logout:hover {
-  background-color: #ffebee;
+  background: #fef2f2;
 }
 
 /* Responsive adjustments for profile */
@@ -480,7 +379,7 @@ body {
   .username {
     display: none;
   }
-
+  
   .user-profile {
     padding: 0.5rem;
   }
@@ -604,5 +503,50 @@ body {
   .social-links {
     justify-content: center;
   }
+}
+.chat-head {
+  position: fixed;
+  bottom: 100px;
+  right: 30px;
+  z-index: 1000;
+}
+
+.chat-toggle {
+  background: var(--primary);
+  border: none;
+  color: white;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.chat-toggle:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+}
+
+.notification-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 10px;
+  height: 10px;
+  background: red;
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+}
+
+.chat-box {
+  margin-top: 1rem;
+  width: 400px;
+  max-height: 600px;
 }
 </style>

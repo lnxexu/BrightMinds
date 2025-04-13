@@ -1,5 +1,21 @@
 <template>
   <div class="messaging-container">
+    <!-- 🔽 Recipient Dropdown Selector -->
+    <div class="recipient-selector" style="padding: 1rem 2rem; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+      <label for="recipient" style="margin-right: 0.5rem; font-weight: 500;">Select Recipient:</label>
+      <select
+        id="recipient"
+        v-model="selectedRecipient"
+        @change="updateRecipient"
+        style="padding: 0.5rem; border-radius: 8px; border: 1px solid #d1d5db; min-width: 200px;"
+      >
+        <option disabled value="">-- Select a recipient --</option>
+        <option v-for="r in filteredRecipients" :key="r.id" :value="r.id">
+          {{ r.full_name }}
+        </option>
+      </select>
+    </div>
+
     <div class="messaging-header">
       <h2 class="heading">Messages</h2>
       <div class="active-status">
@@ -51,117 +67,138 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
-import { supabase } from '../lib/supabaseClient.js';
+import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
+import { supabase } from '../lib/supabaseClient'
 
-// Props
+// Props (for v-model)
 const props = defineProps({
-  recipientId: {
+  modelValue: {
     type: String,
     required: true
   }
-});
+})
 
-const messages = ref([]);
-const newMessage = ref("");
-const messageContainer = ref(null);
-const subscription = ref(null);
+const emit = defineEmits(['update:modelValue'])
 
-// Fetch initial messages
+const messages = ref([])
+const newMessage = ref('')
+const messageContainer = ref(null)
+const subscription = ref(null)
+const currentUserId = ref(null)
+const selectedRecipient = ref(props.modelValue)
+const recipientOptions = ref([])
+
+const updateRecipient = (event) => {
+  emit('update:modelValue', event.target.value)
+  fetchMessages()
+}
+
+const filteredRecipients = computed(() =>
+  recipientOptions.value.filter(r => r.id !== currentUserId.value)
+)
+
+const scrollToBottom = async () => {
+  await nextTick()
+  if (messageContainer.value) {
+    messageContainer.value.scrollTop = messageContainer.value.scrollHeight
+  }
+}
+
 const fetchMessages = async () => {
+  if (!currentUserId.value || !selectedRecipient.value) return
+
   const { data, error } = await supabase
     .from('messages')
     .select('*')
-    .or(`sender_id.eq.${props.recipientId},recipient_id.eq.${props.recipientId}`)
-    .order('created_at', { ascending: true });
+    .or(`sender_id.eq.${currentUserId.value},recipient_id.eq.${currentUserId.value}`)
+    .order('created_at', { ascending: true })
 
   if (error) {
-    console.error('Error fetching messages:', error);
-    return;
+    console.error('Error fetching messages:', error)
+    return
   }
 
-  messages.value = data.map(msg => ({
+  messages.value = data.filter(
+    msg => (msg.sender_id === currentUserId.value && msg.recipient_id === selectedRecipient.value) ||
+           (msg.sender_id === selectedRecipient.value && msg.recipient_id === currentUserId.value)
+  ).map(msg => ({
     id: msg.id,
-    sender: msg.sender_id === supabase.auth.user().id ? 'You' : 'Teacher',
+    sender: msg.sender_id === currentUserId.value ? 'You' : 'Recipient',
     text: msg.content,
-    time: new Date(msg.created_at).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    time: new Date(msg.created_at).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
     })
-  }));
+  }))
 
-  await scrollToBottom();
-};
+  await scrollToBottom()
+}
 
-// Send message function
 const sendMessage = async () => {
-  if (newMessage.value.trim()) {
-    const { data, error } = await supabase
-      .from('messages')
-      .insert([{
-        sender_id: supabase.auth.user().id,
-        recipient_id: props.recipientId,
-        content: newMessage.value.trim(),
-        created_at: new Date().toISOString()
-      }]);
+  if (!newMessage.value.trim() || !currentUserId.value || !selectedRecipient.value) return
 
-    if (error) {
-      console.error('Error sending message:', error);
-      return;
-    }
+  const { error } = await supabase.from('messages').insert([{
+    sender_id: currentUserId.value,
+    recipient_id: selectedRecipient.value,
+    content: newMessage.value.trim(),
+    created_at: new Date().toISOString()
+  }])
 
-    newMessage.value = "";
-  }
-};
+  if (!error) newMessage.value = ''
+}
 
-// Subscribe to new messages
 const subscribeToMessages = () => {
+  if (!currentUserId.value) return
+
   subscription.value = supabase
     .channel('messages')
-    .on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: `sender_id=eq.${supabase.auth.user().id} OR recipient_id=eq.${supabase.auth.user().id}`
-      },
-      (payload) => {
-        const newMessage = {
-          id: payload.new.id,
-          sender: payload.new.sender_id === supabase.auth.user().id ? 'You' : 'Teacher',
-          text: payload.new.content,
-          time: new Date(payload.new.created_at).toLocaleTimeString([], {
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'messages',
+    }, (payload) => {
+      const msg = payload.new
+      const relevant =
+        (msg.sender_id === currentUserId.value && msg.recipient_id === selectedRecipient.value) ||
+        (msg.sender_id === selectedRecipient.value && msg.recipient_id === currentUserId.value)
+
+      if (relevant) {
+        messages.value.push({
+          id: msg.id,
+          sender: msg.sender_id === currentUserId.value ? 'You' : 'Recipient',
+          text: msg.content,
+          time: new Date(msg.created_at).toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit'
           })
-        };
-        messages.value.push(newMessage);
-        scrollToBottom();
+        })
+        scrollToBottom()
       }
-    )
-    .subscribe();
-};
+    })
+    .subscribe()
+}
 
-const scrollToBottom = async () => {
-  await nextTick();
-  if (messageContainer.value) {
-    messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
+onMounted(async () => {
+  const { data, error } = await supabase.auth.getUser()
+  if (error || !data?.user) {
+    console.error('Unable to fetch authenticated user', error)
+    return
   }
-};
 
-// Lifecycle hooks
-onMounted(() => {
-  fetchMessages();
-  subscribeToMessages();
-});
+  currentUserId.value = data.user.id
+
+  const { data: users } = await supabase.from('users').select('id, full_name')
+  recipientOptions.value = users || []
+
+  await fetchMessages()
+  subscribeToMessages()
+})
 
 onUnmounted(() => {
-  if (subscription.value) {
-    subscription.value.unsubscribe();
-  }
-});
+  if (subscription.value) subscription.value.unsubscribe()
+})
 </script>
+
 
 
 <style scoped>
@@ -347,5 +384,23 @@ onUnmounted(() => {
   .message-content {
     max-width: 85%;
   }
+}
+.chat-head {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  max-width: 320px;
+  z-index: 999;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.chat-head .messaging-header {
+  background: #4f46e5;
+  border-radius: 24px 24px 0 0;
+}
+
+.chat-head .messages-section {
+  max-height: 300px;
+  overflow-y: auto;
 }
 </style>
