@@ -65,7 +65,7 @@
         </transition>
       </router-view>
 
-      <!-- Floating Chat Head -->
+      <!-- Floating Chat Head - Now visible everywhere when logged in -->
       <div v-if="isLoggedIn && $route.path !== '/messages'" class="chat-head">
         <button class="chat-toggle" @click="toggleChatHead">
           <i class="fas fa-comments"></i>
@@ -107,6 +107,9 @@ export default {
       showProfileMenu: false,
       userAvatar: "/default-avatar.png", // Add a default avatar path
       username: "User", // Add a default username
+      showChat: false, // Chat visibility state
+      hasUnreadMessage: false, // Unread message state
+      chatRecipient: null, // Chat recipient state
     };
   },
   computed: {
@@ -122,6 +125,12 @@ export default {
       this.$store.dispatch("logout");
       this.showProfileMenu = false;
       this.$router.push("/login");
+    },
+    toggleChatHead() {
+      this.showChat = !this.showChat;
+    },
+    clearUnread() {
+      this.hasUnreadMessage = false;
     },
   },
   created() {
