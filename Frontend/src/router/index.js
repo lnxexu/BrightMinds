@@ -108,13 +108,15 @@ const routes = [
     path: "/profile",
     name: 'Profile',
     component: ProfileView,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
+    props: true
   },
   {
     path: "/settings",
     name: 'Settings',
     component: SettingsView,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
+    props: true
   },
   {
     path: '/quiz/:quizId',

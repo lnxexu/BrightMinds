@@ -1,7 +1,6 @@
 <template>
   <div id="app" class="min-h-screen flex flex-col bg-gradient">
-    <!-- Render App.vue layout only if the route does not require a custom layout -->
-    <header class="header" v-if="!isCustomLayout">
+    <header class="header">
       <div class="navbar">
         <!-- Logo -->
         <div class="logo">
@@ -59,13 +58,29 @@
       </div>
     </header>
 
-    <!-- Main Content -->
     <main class="main-content">
-      <router-view />
+      <router-view v-slot="{ Component }">
+        <transition name="fade" mode="out-in">
+          <div><component :is="Component" /></div>
+        </transition>
+      </router-view>
+
+      <!-- Floating Chat Head -->
+      <div v-if="isLoggedIn && $route.path !== '/messages'" class="chat-head">
+        <button class="chat-toggle" @click="toggleChatHead">
+          <i class="fas fa-comments"></i>
+          <span v-if="hasUnreadMessage && !showChat" class="notification-dot"></span>
+        </button>
+        <MessagingComponent
+          v-if="showChat"
+          class="chat-box"
+          v-model="chatRecipient"
+          @opened="clearUnread"
+        />
+      </div>
     </main>
 
-    <!-- Footer -->
-    <footer class="footer" v-if="!isCustomLayout">
+    <footer class="footer">
       <div class="footer-content">
         <p class="copyright">
           © 2025 Bright Minds Elementary School. All Rights Reserved.
@@ -82,10 +97,11 @@
 
 <script>
 import { mapState } from "vuex";
-import { useRoute } from "vue-router";
+import MessagingComponent from "./components/MessagingComponent.vue";
 
 export default {
   name: "App",
+  components: { MessagingComponent },
   data() {
     return {
       showProfileMenu: false,
@@ -97,11 +113,6 @@ export default {
     ...mapState({
       isLoggedIn: (state) => state.isLoggedIn,
     }),
-    isCustomLayout() {
-      // Check if the current route requires a custom layout
-      const customLayoutRoutes = ["/student-dashboard", "/courses", "/messages", "/quizzes"];
-      return customLayoutRoutes.includes(this.$route.path);
-    },
   },
   methods: {
     toggleProfileMenu() {
