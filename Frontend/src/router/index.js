@@ -12,31 +12,31 @@ import SettingsView from '@/components/SettingsView.vue';
 import RoleSelection from '@/components/RoleSelection.vue';
 import TeacherRegisterForm from '@/components/TeacherRegisterForm.vue';
 import Stream from '@/components/Stream.vue';
-import store from '@/store';
-import StudentDashboard from "@/components/student/StudentDashboard.vue";
-import StudentMessage from "@/components/student/StudentMessage.vue";
+import Auth from "@/components/Success.vue";
 
 
 
 const routes = [
   {
     path: "/",
+    name: 'Login',
+    component: LoginForm,
+  },
+  {
+    path: "/home",
     name: 'Home',
     component: Home
   },
+  {
+    path: '/auth',
+    name: 'Auth',
+    component: Auth,
+    meta: { requiresAuth: true }
+  },
+
   { path: '/role-selection', 
     name: 'RoleSelection', 
     component: RoleSelection 
-  },
-  { 
-    path: '/student-message',
-    name: 'StudentMessage',
-    component: StudentMessage,
-  },
-  {
-    path: '/student-dashboard',
-    name: 'StudentDashboard',
-    component: StudentDashboard,
   },
   { path: '/register', 
     name: 'Register', 
@@ -95,11 +95,6 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
-    path: "/login",
-    component: LoginForm,
-    meta: { requiresGuest: true }
-  },
-  {
     path: "/register",
     component: RegisterForm,
     meta: { requiresGuest: true }
@@ -131,31 +126,5 @@ const router = createRouter({
   routes
 })
 
-// ✅ Navigation Guard
-router.beforeEach((to, from, next) => {
-  const isLoggedIn = store.state.isLoggedIn
-
-  if (to.matched.some(record => record.meta.requiresAuth)) {
-    if (!isLoggedIn) {
-      next('/login')
-      return
-    }
-  }
-
-  if (to.matched.some(record => record.meta.requiresGuest)) {
-    if (isLoggedIn) {
-      if (to.path !== '/courses') {
-        next('/courses')
-        return
-      }
-    }
-  }
-
-  next()
-})
-
-router.afterEach(() => {
-  // Optional: Handle toast clearing or analytics
-})
 
 export default router;

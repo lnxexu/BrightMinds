@@ -1,7 +1,7 @@
   import { createClient } from '@supabase/supabase-js'
 
-  const supabaseUrl = 'https://hupwxuuqqwvaoswnhtmi.supabase.co'
-  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1cHd4dXVxcXd2YW9zd25odG1pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI3OTQwMDYsImV4cCI6MjA1ODM3MDAwNn0.M0vi1tjIESPsqKIQuIIOQXSxjdSOXplELsdvYd-Q9MU'
+  const supabaseUrl = 'https://oxlialxkaodgwsgfsiue.supabase.co'
+  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94bGlhbHhrYW9kZ3dzZ2ZzaXVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUyMTg1NjQsImV4cCI6MjA2MDc5NDU2NH0.JcnqpKFZynxs5eF5vLSEMCPADHDQomJ5hyaiGj45nrk'
   export const supabase = createClient(supabaseUrl, supabaseKey)
 
 // Get all courses with optional column selection

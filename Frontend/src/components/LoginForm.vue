@@ -190,42 +190,23 @@ const handleLogin = async () => {
       return;
     }
 
-    if (data.user && data.session) {
       // Store user data and token in localStorage
-      localStorage.setItem('user', JSON.stringify(data.user));
-      localStorage.setItem('token', data.session.access_token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    localStorage.setItem('token', data.session.access_token);
 
-      // Fetch the user's role from the 'users' table
-      const { data: userRoleData, error: roleError } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', data.user.id)
-        .single();
-
-      if (roleError) {
-        console.error('Error fetching user role:', roleError.message);
-        toast.error('An error occurred while determining your role.');
-        return;
-      }
-
-      // Update Vuex store
-      store.commit('setUser', data.user);
-      store.commit('setLoggedIn', true);
-
-      // Store email if remember me is checked
-      if (rememberMe.value) {
-        localStorage.setItem('email', email.value);
-      }
-
-      // Redirect based on role
-      if (userRoleData.role === 'Teacher') {
-        router.push('/courses'); // Redirect to CourseList.vue
-      } else if (userRoleData.role === 'Student') {
-        router.push('/student-dashboard'); // Redirect to StudentDashboard.vue
-      } else {
-        toast.error('Invalid role. Please contact support.');
-      }
+    // Update Vuex store
+    store.commit('setUser', data.user);
+    store.commit('setLoggedIn', true);
+    
+    // Handle remember me functionality
+    if (rememberMe.value) {
+      localStorage.setItem('email', email.value);
+    } else {
+      localStorage.removeItem('email');
     }
+    router.push('/courses');
+
+
   } catch (err) {
     console.error('Login error:', err);
     toast.error('An unexpected error occurred. Please try again.');
@@ -251,7 +232,6 @@ initFacebookSDK();
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-color: #f5f5f5;
   padding: 20px;
 }
 

@@ -95,7 +95,7 @@
             Start Learning Now
             <i class="fas fa-arrow-right"></i>
           </button>
-          <button @click="$router.push('/login')" class="button secondary">
+          <button @click="$router.push('/')" class="button secondary">
             Already a Member? Login
             <i class="fas fa-sign-in-alt"></i>
           </button>
@@ -140,14 +140,8 @@ export default {
       ]
     }
   },
-  computed: {
-    ...mapState({
-      isLoggedIn: state => state.isLoggedIn
-    })
-  },
-  created() {
-    this.$store.dispatch('checkAuthState');
-  }
+
+
 };
 </script>
 

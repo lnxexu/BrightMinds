@@ -2,7 +2,7 @@
   <div class="course-details" v-if="course">
     <div class="section-header animate-fade-in">
       <h2 class="section-title">
-        {{ course.name }} <span class="title-accent">Details</span>
+        {{ course.course_name }} <span class="title-accent">Details</span>
       </h2>
       <p class="section-description">{{ course.description }}</p>
     </div>
@@ -61,7 +61,7 @@
               <label for="topicName">Topic Name</label>
               <input
                 id="topicName"
-                v-model="newTopic.topic_name"
+                v-model="newTopic.name"
                 type="text"
                 required
                 placeholder="Enter topic name"
@@ -183,7 +183,7 @@
             <i class="fas fa-book"></i>
           </div>
           <div class="topic-content">
-            <h4 class="topic-title">{{ topic.topic_name }}</h4>
+            <h4 class="topic-title">{{ topic.name }}</h4>
             <span class="topic-grade">{{
               topic.grade_level === "Kindergarten"
                 ? "Kindergarten"
@@ -201,7 +201,7 @@
         <div class="modal-content" @click.stop>
           <div class="modal-header">
             <h3>
-              {{ selectedTopic?.topic_name }} ({{
+              {{ selectedTopic?.name }} ({{
                 selectedTopic?.grade_level === "Kindergarten"
                   ? "Kindergarten"
                   : `Grade ${selectedTopic?.grade_level}`
@@ -226,6 +226,8 @@
             </div>
           </div>
           <div class="modal-body">
+            <p class="topic-description">{{ selectedTopic?.description }}</p>
+            
             <div v-if="topicMaterial" class="material-content">
               <div v-if="topicMaterial?.materials" class="material-files">
                 <h4>Topic Materials:</h4>
@@ -250,6 +252,7 @@
                 <p>No materials available for this topic.</p>
               </div>
             </div>
+
             <div v-else class="loading-state">
               <i class="fas fa-spinner fa-spin"></i>
               <p>Loading material...</p>
@@ -259,9 +262,6 @@
       </div>
     </Transition>
 
-    <router-link to="/courses" class="back-button animate-fade-in">
-      <i class="fas fa-arrow-left"></i> Back to Courses
-    </router-link>
   </div>
   <div v-else class="loading-state animate-pulse">
     <i class="fas fa-spinner fa-spin"></i>
@@ -288,14 +288,14 @@
               v-model="deleteConfirmation"
               type="text"
               class="form-input"
-              :placeholder="selectedTopic?.topic_name"
+              :placeholder="selectedTopic?.name"
             />
           </div>
           <div class="form-actions">
             <button
               @click="handleDeleteTopic"
               class="btn-delete"
-              :disabled="deleteConfirmation !== selectedTopic?.topic_name"
+              :disabled="deleteConfirmation !== selectedTopic?.name"
             >
               <i v-if="isDeleting" class="fas fa-spinner fa-spin"></i>
               {{ isDeleting ? "Deleting..." : "Delete Topic" }}
@@ -316,7 +316,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, defineProps} from "vue";
 import { useRoute } from "vue-router";
 import { supabase } from "../lib/supabaseClient";
 import { useToast } from "vue-toastification";
@@ -338,10 +338,17 @@ const showAddTopicModal = ref(false);
 const isSubmitting = ref(false);
 const toast = useToast();
 const newTopic = ref({
-  topic_name: "",
+  name: "",
   grade_level: "",
-  content: "",
+  materials: "",
   description: "",
+});
+
+const props = defineProps({
+  course_id: {
+    type: String,
+    required: false
+  }
 });
 
 const showDeleteConfirmation = () => {
@@ -358,7 +365,7 @@ const closeDeleteModal = () => {
 const handleDeleteTopic = async () => {
   if (
     !selectedTopic.value ||
-    deleteConfirmation.value !== selectedTopic.value.topic_name
+    deleteConfirmation.value !== selectedTopic.value.name
   ) {
     return;
   }
@@ -473,7 +480,7 @@ const getFileIcon = (fileType) => {
 const handleAddTopic = async () => {
   try {
     // Input validation
-    if (!newTopic.value.topic_name?.trim() || !newTopic.value.grade_level) {
+    if (!newTopic.value.name?.trim() || !newTopic.value.grade_level) {
       throw new Error("Topic name and grade level are required");
     }
 
@@ -498,10 +505,11 @@ const handleAddTopic = async () => {
 
     let topicData;
     const topicPayload = {
-      topic_name: newTopic.value.topic_name.trim(),
+      name: newTopic.value.name,
       grade_level: newTopic.value.grade_level,
-      course: course.value.name,
-      description: newTopic.value.description, // Add this line
+      description: newTopic.value.description, 
+      materials: [],
+      course_id: route.params.course_id, // Ensure this is set correctly
     };
 
     if (newTopic.value.id) {
@@ -606,9 +614,9 @@ const handleAddTopic = async () => {
 // Add this helper function to keep the code DRY
 const resetForm = () => {
   newTopic.value = {
-    topic_name: "",
+    name: "",
     grade_level: "",
-    content: "",
+    materials: "",
     description: "",
   };
   selectedFiles.value = [];
@@ -617,9 +625,10 @@ const resetForm = () => {
 const closeAddTopicModal = () => {
   showAddTopicModal.value = false;
   newTopic.value = {
-    topic_name: "",
+    name: "",
     grade_level: "",
-    content: "",
+    materials: "",
+    description: "",
   };
 };
 
@@ -653,9 +662,9 @@ const handleModifyTopic = async (topic) => {
   // Pre-fill the form with existing topic data
   newTopic.value = {
     id: topic.id,
-    topic_name: topic.topic_name,
+    topic: topic.name,
     grade_level: topic.grade_level,
-    content: topic.content || "",
+    materials: topic.materials || "",
   };
 
   // Get existing materials
@@ -674,7 +683,7 @@ const fetchCourseDetails = async () => {
     const { data: courseData, error: courseError } = await supabase
       .from("courses")
       .select("*")
-      .eq("course_id", route.params.course_id) // Changed from id to course_id
+      .eq("id", route.params.course_id) // Changed from id to course_id
       .single();
 
     if (courseError) {
@@ -687,14 +696,16 @@ const fetchCourseDetails = async () => {
     // Fetch topics for this course
     const { data: topicsData, error: topicsError } = await supabase
       .from("topics")
-      .select("id, topic_name, grade_level")
-      .eq("course", course.value.name);
+      .select("id, name, grade_level,description")
+      .eq("course_id", course.value.id) // Changed from course_id to id;
 
     if (topicsError) {
       console.error("Error fetching topics:", topicsError);
       return;
     }
     topics.value = topicsData;
+
+    console.log("Fetched topics:", topics.value);
   } catch (error) {
     console.error("Error:", error);
   }

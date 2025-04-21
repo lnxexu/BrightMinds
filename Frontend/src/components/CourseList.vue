@@ -15,26 +15,28 @@
       class="course-grid"
     >
       <div v-for="(course, index) in courses" 
-           :key="course.course_id" 
+           :key="course.id" 
            class="course-card"
            :style="{ animationDelay: `${index * 100}ms` }">
         <div class="card-icon">
-          <i :class="course.icon"></i>
+          <i :class="course.icons"></i>
         </div>
         <div class="card-content">
-          <h3 class="card-title">{{ course.name }}</h3>
+          <h3 class="card-title">{{ course.course_name }}</h3>
           <p class="card-description">{{ course.description }}</p>
           <div class="card-stats">
             <div class="stat">
+              <label for="">Estimated Weeks :</label>
               <i class="fas fa-clock"></i>
-              <span>{{ course.duration }}</span>
+              <span>{{ course.estimated_weeks }}</span>
             </div>
             <div class="stat">
-              <i class="fas fa-users"></i>
-              <span>{{ course.student_count }}+ Students</span>
+              <label for="">Topics :</label>
+              <i class="fas fa-book"></i>
+              <span>{{ course.number_of_topics }} </span>
             </div>
           </div>
-          <button class="card-button" @click="navigateToCourse(course.course_id)">
+          <button class="card-button" @click="navigateToCourse(course.id)">
             <i class="fas fa-arrow-right"></i> View Course
           </button>
         </div>
@@ -64,7 +66,7 @@ const fetchCourses = async () => {
   try {
     const { data, error } = await supabase.from("courses").select("*")
     //arrange by course_id in descending order
-    .order("course_id", { ascending: false });
+    .order("id", { ascending: false });
 
     if (error) {
       console.error("Error fetching courses:", error);

@@ -37,7 +37,7 @@
         <!-- Auth Buttons -->
         <div class="nav-buttons">
           <template v-if="!isLoggedIn">
-            <router-link to="/login" class="auth-button login"><i class="fas fa-sign-in-alt"></i><span>Login</span></router-link>
+            <router-link to="/" class="auth-button login"><i class="fas fa-sign-in-alt"></i><span>Login</span></router-link>
             <router-link to="/register" class="auth-button register"><i class="fas fa-user-plus"></i><span>Register</span></router-link>
           </template>
           <template v-else>
@@ -98,6 +98,7 @@
 <script>
 import { mapState } from "vuex";
 import MessagingComponent from "./components/MessagingComponent.vue";
+import { supabase } from "./lib/supabaseClient";
 
 export default {
   name: "App",
@@ -113,18 +114,43 @@ export default {
     };
   },
   computed: {
-    ...mapState({
-      isLoggedIn: (state) => state.isLoggedIn,
-    }),
+    ...mapState(["isLoggedIn", "user"]),
+
   },
   methods: {
+    async fetchUserData() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        console.error("User not found in Supabase");
+        return;
+      }
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("avatar_url, full_name")
+        .eq("id", user.id)
+        .single();
+
+      if (error) {
+        console.error("Error fetching user data:", error);
+      } else {
+        this.userAvatar = data.avatar_url || "/default-avatar.png";
+        this.username = data.full_name.split(" ")[0] || "User";
+        console.log("User data fetched:", data);
+      }
+    },
     toggleProfileMenu() {
       this.showProfileMenu = !this.showProfileMenu;
     },
-    logout() {
-      this.$store.dispatch("logout");
-      this.showProfileMenu = false;
-      this.$router.push("/login");
+    async logout() {
+      // logout from supabase
+      let { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error("Error logging out:", error);
+      } else {
+        console.log("User logged out successfully");
+        this.$store.commit("setLoggedIn", false);
+        this.$router.push("/login");
+      }
     },
     toggleChatHead() {
       this.showChat = !this.showChat;
@@ -134,25 +160,13 @@ export default {
     },
   },
   created() {
-    // Check auth state when app loads
-    this.$store.dispatch("checkAuthState").then(() => {
-      // If user is on a protected route and not logged in, redirect to login
-      if (this.$route.meta.requiresAuth && !this.isLoggedIn) {
-        this.$router.push("/login");
-      }
-      // If user is on a guest route and logged in, redirect to home
-      else if (this.$route.meta.requiresGuest && this.isLoggedIn) {
-        this.$router.push("/");
-      }
-    });
-
-    // Retrieve the user's first name from localStorage
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      const user = JSON.parse(storedUser);
-      this.username = user.user_metadata?.full_name?.split(" ")[0] || "User";
-    }
+    
   },
+  mounted() {
+      this.fetchUserData();
+  },
+
+  
 };
 </script>
 
