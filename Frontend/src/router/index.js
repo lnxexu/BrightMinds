@@ -13,8 +13,8 @@ import RoleSelection from '@/components/RoleSelection.vue';
 import TeacherRegisterForm from '@/components/TeacherRegisterForm.vue';
 import Stream from '@/components/Stream.vue';
 import Auth from "@/components/Success.vue";
-
-
+import Admin from "@/components/Admin.vue";
+import QuizTaker from "@/components/QuizTaker.vue";
 
 const routes = [
   {
@@ -114,11 +114,18 @@ const routes = [
     props: true
   },
   {
-    path: '/quiz/:quizId',
+    path: '/quiz',
     name: 'QuizTaker',
-    component: () => import('@/components/QuizTaker.vue'),
+    component: QuizTaker,
     meta: { requiresAuth: true }
-  }
+  },
+  {
+    path: '/admin',
+    name: 'Admin',
+    component: Admin,
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+
 ]
 
 const router = createRouter({

@@ -15,7 +15,9 @@
             accept="image/*"
             style="display: none"
           />
-          <button class="change-avatar-btn" @click="triggerFileInput">Change Photo</button>
+          <button class="change-avatar-btn" @click="triggerFileInput">
+            Change Photo
+          </button>
         </div>
         <div class="quick-actions">
           <button class="primary-button" @click="editProfile">
@@ -115,9 +117,11 @@
           </div>
         </div>
         <div class="modal-actions">
-          <button type="button" class="secondary-button" @click="closeModal">Cancel</button>
+          <button type="button" class="secondary-button" @click="closeModal">
+            Cancel
+          </button>
           <button type="submit" class="primary-button" :disabled="loading">
-            {{ loading ? 'Saving...' : 'Save Changes' }}
+            {{ loading ? "Saving..." : "Save Changes" }}
           </button>
         </div>
       </form>
@@ -126,184 +130,222 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeMount, onBeforeUnmount} from 'vue'
-import { supabase } from '@/lib/supabaseClient'
-import { useToast } from 'vue-toastification'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, onBeforeMount, onBeforeUnmount } from "vue";
+import { supabase } from "@/lib/supabaseClient";
+import { useToast } from "vue-toastification";
+import { useRouter } from "vue-router";
 
-const toast = useToast()
-const loading = ref(false)
-const showEditModal = ref(false)
+const toast = useToast();
+const loading = ref(false);
+const showEditModal = ref(false);
 
 // Extended user data
-const router = useRouter()
-const username = ref('')
-const fullName = ref('John Doe')
-const email = ref('john.doe@example.com')
-const role = ref('Student')
-const memberSince = ref(new Date())
-const timezone = ref('Pacific Time (US & Canada)')
-const age = ref(null)
-const gender = ref('')
-const phone = ref('')
-const profileImage = ref(null)
-const dateOfBirth = ref(null)
-const address = ref('')
+const router = useRouter();
+const username = ref("");
+const fullName = ref("John Doe");
+const email = ref("john.doe@example.com");
+const role = ref("Student");
+const memberSince = ref(new Date());
+const timezone = ref("Pacific Time (US & Canada)");
+const age = ref(null);
+const gender = ref("");
+const phone = ref("");
+const profileImage = ref(null);
+const dateOfBirth = ref(null);
+const address = ref("");
 
 const initials = computed(() => {
-  if (!fullName.value) return ''
-  const names = fullName.value.split(' ')
-  return names.map(name => name.charAt(0).toUpperCase()).join('')
-})
+  if (!fullName.value) return "";
+  const names = fullName.value.split(" ");
+  return names.map((name) => name.charAt(0).toUpperCase()).join("");
+});
 
 const formatDate = (date) => {
-  if (!date) return 'Not set'
+  if (!date) return "Not set";
   try {
-    const dateObj = new Date(date)
-    if (isNaN(dateObj.getTime())) return 'Invalid date'
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    }).format(dateObj)
+    const dateObj = new Date(date);
+    if (isNaN(dateObj.getTime())) return "Invalid date";
+    return new Intl.DateTimeFormat("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }).format(dateObj);
   } catch (error) {
-    console.error('Date formatting error:', error)
-    return 'Invalid date'
+    console.error("Date formatting error:", error);
+    return "Invalid date";
   }
-}
+};
 
 const settings = () => {
   // Navigate to settings page
-  router.push('/settings')
-
-}
+  router.push("/settings");
+};
 
 // Edit form state
 const editForm = ref({
-  username: '',
-  firstName: '',
-  lastName: '',
+  username: "",
+  firstName: "",
+  lastName: "",
   age: null,
-  gender: '',
-  phone: '',
-  dateOfBirth: '',
-  address: ''
-})
+  gender: "",
+  phone: "",
+  dateOfBirth: "",
+  address: "",
+});
 
-const fileInput = ref(null)
-const uploadingPhoto = ref(false)
+const fileInput = ref(null);
+const uploadingPhoto = ref(false);
 
 const triggerFileInput = () => {
-  fileInput.value.click()
-}
+  fileInput.value.click();
+};
 
 const handleFileChange = async (event) => {
-  const file = event.target.files[0]
-  if (!file) return
+  const file = event.target.files[0];
+  if (!file) return;
 
-  if (!file.type.startsWith('image/')) {
-    toast.error('Please select an image file')
-    return
+  if (!file.type.startsWith("image/")) {
+    toast.error("Please select an image file");
+    return;
   }
 
-  uploadingPhoto.value = true
+  uploadingPhoto.value = true;
   try {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('No user logged in')
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) throw new Error("No user logged in");
 
     // Upload the file
-    const fileExt = file.name.split('.').pop()
-    const filepath = `public/${user.id}.${fileExt}`
+    const fileExt = file.name.split(".").pop();
+    const filepath = `public/${user.id}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
-      .from('avatars')
+      .from("avatars")
       .upload(filepath, file, {
         upsert: true,
-        contentType: file.type
-      })
+        contentType: file.type,
+      });
 
-    if (uploadError) throw uploadError
+    if (uploadError) throw uploadError;
 
-      
     // Get the public URL of the uploaded image
-    const { data: { publicUrl } } = supabase.storage
-      .from('avatars')
-      .getPublicUrl(filepath)
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("avatars").getPublicUrl(filepath);
 
-    if (!publicUrl) throw new Error('Failed to get public URL')
+    if (!publicUrl) throw new Error("Failed to get public URL");
 
     // Update the database with the new image URL
     const { error: updateError } = await supabase
-      .from('users')
+      .from("profiles")
       .update({ avatar_url: publicUrl })
-      .eq('id', user.id)
+      .eq("id", user.id);
 
-    if (updateError) throw updateError
+    if (updateError) throw updateError;
 
     // Update the profile image URL
-    profileImage.value = publicUrl
+    profileImage.value = publicUrl;
 
-    toast.success('Profile photo updated successfully!')
+    toast.success("Profile photo updated successfully!", {
+      position: "top-right",
+      timeout: 3000,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      draggablePercent: 0.6,
+      showCloseButtonOnHover: false,
+      hideProgressBar: false,
+    });
   } catch (error) {
-    console.error('Error uploading photo:', error)
-    toast.error('Failed to update profile photo')
+    console.error("Error uploading photo:", error);
+    toast.error("Failed to update profile photo", {
+      position: "top-right",
+      timeout: 3000,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      draggablePercent: 0.6,
+      showCloseButtonOnHover: false,
+      hideProgressBar: false,
+    });
   } finally {
-    uploadingPhoto.value = false
+    uploadingPhoto.value = false;
     // Reset the file input
-    event.target.value = ''
+    event.target.value = "";
   }
-}
+};
 
 // Update loadUserData function to use getPublicUrl
 const loadUserData = async () => {
   try {
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
-      toast.error('No user logged in')
-      return
+      toast.error("No user logged in");
+      return;
     }
 
     // Load user profile data
     const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', user.id)
-      .single()
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
 
-    if (error) throw error
+    if (error) throw error;
 
     if (data) {
       // Update user data
-      username.value = data.username
-      fullName.value = data.full_name
-      age.value = data.age
-      gender.value = data.gender
-      phone.value = data.phone
-      dateOfBirth.value = data.date_of_birth
-      profileImage.value = data.avatar_url
-      address.value = data.address
-      email.value = user.email
-      role.value = data.role || 'Student'
-      memberSince.value = new Date(user.created_at)
-      timezone.value = Intl.DateTimeFormat().resolvedOptions().timeZone
+      username.value = data.username;
+      fullName.value = data.full_name;
+      age.value = data.age;
+      gender.value = data.gender;
+      phone.value = data.phone;
+      dateOfBirth.value = data.date_of_birth;
+      profileImage.value = data.avatar_url;
+      address.value = data.address;
+      email.value = user.email;
+      role.value = data.role || "Student";
+      memberSince.value = new Date(user.created_at);
+      timezone.value = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
       // Update profile image loading
-      try {
-        const { data: { publicUrl } } = supabase.storage
-          .from('avatars')
-          .getPublicUrl(`public/${user.id}.${data.avatar_url.split('.').pop()}`)
+      if (data.avatar_url) {
+        try {
+          const {
+            data: { publicUrl },
+          } = supabase.storage
+            .from("avatars")
+            .getPublicUrl(
+              `public/${user.id}.${data.avatar_url.split(".").pop()}`
+            );
 
-        profileImage.value = publicUrl
-      } catch (imageError) {
-        console.error('Error loading profile image:', imageError)
-        profileImage.value = null
+          profileImage.value = publicUrl;
+        } catch (imageError) {
+          console.error("Error loading profile image:", imageError);
+          profileImage.value = null;
+        }
+      } else {
+        // No avatar URL exists, keep the profileImage null
+        profileImage.value = null;
       }
     }
   } catch (error) {
-    console.error('Error loading user data:', error)
-    toast.error('Failed to load profile data')
+    console.error("Error loading user data:", error);
+    toast.error("Failed to load profile data", {
+      position: "top-right",
+      timeout: 3000,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      draggablePercent: 0.6,
+      showCloseButtonOnHover: false,
+      hideProgressBar: false,
+    });
   }
-}
+};
 
 const editProfile = () => {
   editForm.value = {
@@ -311,23 +353,32 @@ const editProfile = () => {
     gender: gender.value,
     phone: phone.value,
     dateOfBirth: dateOfBirth.value,
-    address: address.value
-  }
-  showEditModal.value = true
-}
+    address: address.value,
+  };
+  showEditModal.value = true;
+};
 
 const closeModal = () => {
-  showEditModal.value = false
-}
+  showEditModal.value = false;
+};
 
 const saveProfile = async () => {
-  loading.value = true
+  loading.value = true;
   try {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('No user logged in')
+    // philippine time for updating
+    const date = new Date();
+    const options = { timeZone: "Asia/Manila" };
+    const formatter = new Intl.DateTimeFormat([], options);
+    const formattedDate = formatter.format(date);
 
-    const { error } = await supabase
-      .from('users')
+    const formattedDateTime = new Date(formattedDate).toISOString();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) throw new Error("No user logged in");
+
+    const { data, error } = await supabase
+      .from("profiles")
       .update({
         username: editForm.value.username,
         age: editForm.value.age,
@@ -335,46 +386,64 @@ const saveProfile = async () => {
         phone: editForm.value.phone,
         date_of_birth: editForm.value.dateOfBirth,
         address: editForm.value.address,
-        updated_at: new Date()
+        updated_at: formattedDateTime,
       })
-      .eq('id', user.id)
+      .eq("id", user.id);
 
-    if (error) throw error
+    if (error) throw error;
+
+    console.log(data);
 
     // Update local state
-    username.value = editForm.value.username
-    firstName.value = editForm.value.firstName
-    lastName.value = editForm.value.lastName
-    age.value = editForm.value.age
-    gender.value = editForm.value.gender
-    phone.value = editForm.value.phone
-    dateOfBirth.value = editForm.value.dateOfBirth
-    address.value = editForm.value.address
+    username.value = editForm.value.username;
+    age.value = editForm.value.age;
+    gender.value = editForm.value.gender;
+    phone.value = editForm.value.phone;
+    dateOfBirth.value = editForm.value.dateOfBirth;
+    address.value = editForm.value.address;
 
-    toast.success('Profile updated successfully!')
-    closeModal()
+    toast.success("Profile updated successfully!", {
+      position: "top-right",
+      timeout: 3000,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      draggablePercent: 0.6,
+      showCloseButtonOnHover: false,
+      hideProgressBar: false,
+    });
+    closeModal();
   } catch (error) {
-    console.error('Error updating profile:', error)
-    toast.error('Failed to update profile')
+    console.error("Error updating profile:", error);
+    toast.error("Failed to update profile", {
+      position: "top-right",
+      timeout: 3000,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      draggablePercent: 0.6,
+      showCloseButtonOnHover: false,
+      hideProgressBar: false,
+    });
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
 // Load user data on component mount
 onMounted(() => {
-  loadUserData()
+  loadUserData();
 });
 
 onBeforeMount(() => {
-  loadUserData()
-})
+  loadUserData();
+});
 
 onBeforeUnmount(() => {
   if (profileImage.value) {
-    URL.revokeObjectURL(profileImage.value)
+    URL.revokeObjectURL(profileImage.value);
   }
-})
+});
 </script>
 
 <style scoped>
@@ -449,7 +518,8 @@ onBeforeUnmount(() => {
   gap: 1rem;
 }
 
-.primary-button, .secondary-button {
+.primary-button,
+.secondary-button {
   width: 100%;
   padding: 0.75rem;
   border-radius: 8px;
@@ -642,7 +712,7 @@ security-item p {
   .profile-layout {
     grid-template-columns: 1fr;
   }
-  
+
   .profile-sidebar {
     border-right: none;
     border-bottom: 1px solid #e2e8f0;
@@ -653,7 +723,7 @@ security-item p {
   .form-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .form-group.full-width {
     grid-column: span 1;
   }

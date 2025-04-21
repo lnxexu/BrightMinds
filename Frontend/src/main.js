@@ -7,6 +7,7 @@ import { supabase } from "./lib/supabaseClient";
 import 'vue-toastification/dist/index.css';
 import store from './store' 
 import Toast, { POSITION } from "vue-toastification";
+import { MotionPlugin } from '@vueuse/motion'
 
 const app = createApp(App)
 
@@ -47,6 +48,7 @@ const initAuth = async () => {
 app.use(Toast, options)
 app.use(router)
 app.use(store) // Use Vuex store
+app.use(MotionPlugin)
 
 // Mount the app
 app.mount('#app')

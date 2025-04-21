@@ -25,10 +25,10 @@
             <option value="">Choose a course</option>
             <option
               v-for="course in courses"
-              :key="course.name"
-              :value="course.name"
+              :key="course.id"
+              :value="course.id"
             >
-              {{ course.name }}
+              {{ course.course_name }}
             </option>
           </select>
         </div>
@@ -44,10 +44,10 @@
             <option value="" disabled selected>Choose a topic</option>
             <option
               v-for="topic in topics"
-              :key="topic.topic_name"
-              :value="topic.topic_name"
+              :key="topic.name"
+              :value="topic.name"
             >
-              {{ topic.topic_name }}
+              {{ topic.name }}
             </option>
           </select>
         </div>
@@ -277,8 +277,8 @@ const fetchCourses = async () => {
   try {
     const { data, error } = await supabase
       .from("courses")
-      .select("name")
-      .order("name", { ascending: true });
+      .select("course_name, id")
+      .order("course_name", { ascending: true });
 
     if (error) {
       console.error("Error fetching courses:", error);
@@ -286,7 +286,7 @@ const fetchCourses = async () => {
     }
 
     courses.value = data || [];
-    console.log("Fetched courses:", courses.value);
+    console.log("Fetched courses:", courses.value); // Debug log
   } catch (error) {
     console.error("Error fetching courses:", error);
   }
@@ -296,11 +296,12 @@ const fetchTopics = async (courseId) => {
   if (!courseId) return;
 
   try {
+    console.log("Fetching topics for course ID:", courseId); // Debug log
     const { data, error } = await supabase
       .from("topics")
-      .select("id, topic_name")
-      .eq("course", courseId)
-      .order("topic_name", { ascending: true });
+      .select("course_id, name")
+      .eq("course_id", courseId)
+      .order("name", { ascending: true });
 
     if (error) {
       console.error("Error fetching topics:", error);
@@ -315,11 +316,11 @@ const fetchTopics = async (courseId) => {
 };
 
 const handleCourseChange = async () => {
-  console.log("Course changed to:", selectedCourse.value);
   selectedTopic.value = null;
   topics.value = [];
 
   if (selectedCourse.value) {
+    console.log("Selected course:", selectedCourse); // Debug log
     await fetchTopics(selectedCourse.value);
   }
 };

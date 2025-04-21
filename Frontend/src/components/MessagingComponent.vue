@@ -262,13 +262,14 @@ onUnmounted(() => {
   justify-content: space-between;
   padding: 1rem 2rem;
   background: #f9fafb;
-  border-bottom: 1px solid #e5e7eb;
 }
 
 #recipient-selector label {
   font-weight: 500;
   margin-right: 0.5rem; 
 }
+
+
 
 .messaging-header {
   background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
@@ -461,5 +462,14 @@ onUnmounted(() => {
 .chat-head .messages-section {
   max-height: 300px;
   overflow-y: auto;
+}
+
+
+
+.chat-head .recipient-selector {
+  display: flex;
+  padding: 1rem 2rem;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
 }
 </style>

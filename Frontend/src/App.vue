@@ -4,7 +4,7 @@
       <div class="navbar">
         <!-- Logo -->
         <div class="logo">
-          <router-link to="/" class="logo-link">
+          <router-link to="/home" class="logo-link">
             <i class="fas fa-graduation-cap"></i>
             <span>Bright <span class="text-gradient">Minds</span></span>
           </router-link>
@@ -12,25 +12,14 @@
 
         <!-- Navigation Links - Only Visible When Logged In -->
         <nav v-if="isLoggedIn" class="nav-links">
-          <router-link to="/courses" class="nav-link">
-            <i class="fas fa-book"></i>
-            <span>Courses</span>
-          </router-link>
-          <router-link to="/messages" class="nav-link">
-            <i class="fas fa-comments"></i>
-            <span>Messaging</span>
-          </router-link>
-          <router-link to="/quiz-creator" class="nav-link">
-            <i class="fas fa-tasks"></i>
-            <span>Quiz Creator</span>
-          </router-link>
-          <router-link to="/parent" class="nav-link">
-            <i class="fas fa-user-shield"></i>
-            <span>Parent Dashboard</span>
-          </router-link>
-          <router-link to="/stream" class="nav-link">
-            <i class="fas fa-bullhorn"></i>
-            <span>Stream</span>
+          <router-link 
+            v-for="link in allowedNavLinks" 
+            :key="link.path" 
+            :to="link.path" 
+            class="nav-link"
+          >
+            <i :class="link.icon"></i>
+            <span>{{ link.label }}</span>
           </router-link>
         </nav>
 
@@ -78,6 +67,23 @@
           @opened="clearUnread"
         />
       </div>
+      
+      <!-- Logout Confirmation Modal -->
+      <div v-if="showLogoutModal" class="modal-overlay" @click.self="cancelLogout">
+        <div class="modal-container">
+          <div class="modal-header">
+            <h3>Confirm Logout</h3>
+            <button class="close-button" @click="cancelLogout">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p>Are you sure you want to logout from your {{ userRoleDisplay }} account?</p>
+          </div>
+          <div class="modal-footer">
+            <button class="cancel-button" @click="cancelLogout">Cancel</button>
+            <button class="confirm-button" @click="confirmLogout">Logout</button>
+          </div>
+        </div>
+      </div>
     </main>
 
     <footer class="footer">
@@ -108,14 +114,68 @@ export default {
       showProfileMenu: false,
       userAvatar: "/default-avatar.png", // Add a default avatar path
       username: "User", // Add a default username
+      userRole: "", // Store user role
       showChat: false, // Chat visibility state
       hasUnreadMessage: false, // Unread message state
       chatRecipient: null, // Chat recipient state
+      showLogoutModal: false, // Logout confirmation modal state
+      navLinks: [
+        { 
+          path: "/courses", 
+          icon: "fas fa-book", 
+          label: "Courses", 
+          allowedRoles: ["student", "teacher", "admin"] 
+        },
+        { 
+          path: "/messages", 
+          icon: "fas fa-comments", 
+          label: "Messaging", 
+          allowedRoles: ["student", "teacher", "parent", "admin"] 
+        },
+        { 
+          path: "/quiz-creator", 
+          icon: "fas fa-tasks", 
+          label: "Quiz Creator", 
+          allowedRoles: ["teacher", "admin"] 
+        },
+        { 
+          path: "/parent", 
+          icon: "fas fa-user-shield", 
+          label: "Parent Dashboard", 
+          allowedRoles: ["parent", "admin"] 
+        },
+        { 
+          path: "/stream", 
+          icon: "fas fa-bullhorn", 
+          label: "Stream", 
+          allowedRoles: ["student", "teacher", "admin"] 
+        },
+        {
+          path: "/admin", 
+          icon: "fas fa-cogs", 
+          label: "Admin Panel", 
+          allowedRoles: ["admin"] 
+        }
+      ]
     };
   },
   computed: {
     ...mapState(["isLoggedIn", "user"]),
-
+    allowedNavLinks() {
+      // If no role is specified, show no links
+      if (!this.userRole) return [];
+      
+      // Filter links based on user role
+      return this.navLinks.filter(link => 
+        link.allowedRoles.includes(this.userRole)
+      );
+    },
+    userRoleDisplay() {
+      // Capitalize first letter of role for display
+      return this.userRole ? 
+        this.userRole.charAt(0).toUpperCase() + this.userRole.slice(1) : 
+        'User';
+    }
   },
   methods: {
     async fetchUserData() {
@@ -126,7 +186,7 @@ export default {
       }
       const { data, error } = await supabase
         .from("profiles")
-        .select("avatar_url, full_name")
+        .select("avatar_url, full_name, role, username")
         .eq("id", user.id)
         .single();
 
@@ -134,22 +194,34 @@ export default {
         console.error("Error fetching user data:", error);
       } else {
         this.userAvatar = data.avatar_url || "/default-avatar.png";
-        this.username = data.full_name.split(" ")[0] || "User";
+        this.username = data.username || data.full_name.split(" ")[0] || "User";
+        this.userRole = data.role || "";
         console.log("User data fetched:", data);
       }
     },
     toggleProfileMenu() {
       this.showProfileMenu = !this.showProfileMenu;
     },
-    async logout() {
-      // logout from supabase
+    logout() {
+      // Show the logout confirmation modal
+      this.showLogoutModal = true;
+      // Hide profile menu when showing logout modal
+      this.showProfileMenu = false;
+    },
+    cancelLogout() {
+      // Close the modal without logging out
+      this.showLogoutModal = false;
+    },
+    async confirmLogout() {
+      // Actual logout process after confirmation
       let { error } = await supabase.auth.signOut()
       if (error) {
         console.error("Error logging out:", error);
       } else {
         console.log("User logged out successfully");
         this.$store.commit("setLoggedIn", false);
-        this.$router.push("/login");
+        this.showLogoutModal = false;
+        this.$router.push("/");
       }
     },
     toggleChatHead() {
@@ -160,13 +232,17 @@ export default {
     },
   },
   created() {
-    
+    // Check user role early in the component lifecycle
+    if (this.isLoggedIn) {
+      this.fetchUserData();
+    }
   },
   mounted() {
+    // Keep fetchUserData here as a fallback
+    if (this.isLoggedIn && !this.userRole) {
       this.fetchUserData();
+    }
   },
-
-  
 };
 </script>
 
@@ -564,7 +640,94 @@ body {
 
 .chat-box {
   margin-top: 1rem;
-  width: 400px;
+  width: 500px;
   max-height: 600px;
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal-container {
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  width: 90%;
+  max-width: 400px;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem;
+  border-bottom: 1px solid rgba(79, 70, 229, 0.1);
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.25rem;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+
+.modal-body {
+  padding: 1.25rem;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 1.25rem;
+  gap: 0.75rem;
+  border-top: 1px solid rgba(79, 70, 229, 0.1);
+}
+
+.cancel-button {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  background: var(--secondary);
+  color: var(--text-secondary);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.confirm-button {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.cancel-button:hover {
+  background: #e5e7eb;
+}
+
+.confirm-button:hover {
+  background: #dc2626;
 }
 </style>
