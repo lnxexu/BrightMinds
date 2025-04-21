@@ -97,9 +97,11 @@ import { supabase } from "../lib/supabaseClient";
 const props = defineProps({
   modelValue: {
     type: String,
-    required: true,
+    required: false,
+    default: "",
   },
 });
+
 
 const emit = defineEmits(["update:modelValue"]);
 
@@ -108,7 +110,7 @@ const newMessage = ref("");
 const messageContainer = ref(null);
 const subscription = ref(null);
 const currentUserId = ref(null);
-const selectedRecipient = ref(props.modelValue);
+const selectedRecipient = ref(props.modelValue || "");
 const recipientOptions = ref([]);
 
 const updateRecipient = (event) => {
@@ -230,7 +232,7 @@ onMounted(async () => {
 
   currentUserId.value = data.user.id;
 
-  const { data: users } = await supabase.from("users").select("id, full_name");
+  const { data: users } = await supabase.from("profiles").select("id, full_name");
   recipientOptions.value = users || [];
 
   await fetchMessages();
@@ -240,6 +242,8 @@ onMounted(async () => {
 onUnmounted(() => {
   if (subscription.value) subscription.value.unsubscribe();
 });
+
+
 </script>
 
 <style scoped>
