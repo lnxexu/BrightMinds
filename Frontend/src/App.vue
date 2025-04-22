@@ -23,6 +23,12 @@
           </router-link>
         </nav>
 
+        <!-- Login status indicator -->
+        <div v-if="isLoggedIn" class="login-status">
+          <span class="status-indicator"></span>
+          <span class="status-text">{{ userRoleDisplay }}</span>
+        </div>
+
         <!-- Auth Buttons -->
         <div class="nav-buttons">
           <template v-if="!isLoggedIn">
@@ -102,23 +108,25 @@
 </template>
 
 <script>
-import { mapState } from "vuex";
 import MessagingComponent from "./components/MessagingComponent.vue";
 import { supabase } from "./lib/supabaseClient";
+import router from "./router";
 
 export default {
   name: "App",
   components: { MessagingComponent },
   data() {
     return {
+      isLoggedIn: false,
+      user: null,
       showProfileMenu: false,
-      userAvatar: "/default-avatar.png", // Add a default avatar path
-      username: "User", // Add a default username
-      userRole: "", // Store user role
-      showChat: false, // Chat visibility state
-      hasUnreadMessage: false, // Unread message state
-      chatRecipient: null, // Chat recipient state
-      showLogoutModal: false, // Logout confirmation modal state
+      userAvatar: "/default-avatar.png",
+      username: "User",
+      userRole: "",
+      showChat: false,
+      hasUnreadMessage: false,
+      chatRecipient: null,
+      showLogoutModal: false,
       navLinks: [
         { 
           path: "/courses", 
@@ -160,7 +168,6 @@ export default {
     };
   },
   computed: {
-    ...mapState(["isLoggedIn", "user"]),
     allowedNavLinks() {
       // If no role is specified, show no links
       if (!this.userRole) return [];
@@ -178,78 +185,125 @@ export default {
     }
   },
   methods: {
-    async fetchUserData() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        console.error("User not found in Supabase");
-        return;
-      }
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("avatar_url, full_name, role, username")
-        .eq("id", user.id)
-        .single();
-
-      if (error) {
-        console.error("Error fetching user data:", error);
-      } else {
-        this.userAvatar = data.avatar_url || "/default-avatar.png";
-        this.username = data.username || data.full_name.split(" ")[0] || "User";
-        this.userRole = data.role || "";
-        console.log("User data fetched:", data);
+    async checkAuthStatus() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          this.isLoggedIn = true;
+          this.fetchUserData();
+        } else {
+          this.isLoggedIn = false;
+          this.user = null;
+        }
+      } catch (error) {
+        console.error("Error checking auth status:", error);
+        this.isLoggedIn = false;
+        this.user = null;
       }
     },
+    
+    async fetchUserData() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          console.error("User not found in Supabase");
+          this.isLoggedIn = false;
+          this.user = null;
+          return;
+        }
+        
+        // User exists in auth, update local state
+        this.user = user;
+        this.isLoggedIn = true;
+        
+        // Fetch profile details including role
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("avatar_url, full_name, role, username")
+          .eq("id", user.id)
+          .single();
+
+        if (error) {
+          console.error("Error fetching user data:", error);
+        } else {
+          this.userAvatar = data.avatar_url || "/default-avatar.png";
+          this.username = data.username || data.full_name.split(" ")[0] || "User";
+          this.userRole = data.role || "";
+          
+          console.log("User data fetched:", data);
+        }
+      } catch (error) {
+        console.error("Error in fetchUserData:", error);
+      }
+    },
+    
     toggleProfileMenu() {
       this.showProfileMenu = !this.showProfileMenu;
     },
+    
     logout() {
       // Show the logout confirmation modal
       this.showLogoutModal = true;
       // Hide profile menu when showing logout modal
       this.showProfileMenu = false;
     },
+    
     cancelLogout() {
       // Close the modal without logging out
       this.showLogoutModal = false;
     },
+    
     async confirmLogout() {
-      // Actual logout process after confirmation
-      let { error } = await supabase.auth.signOut()
-      if (error) {
-        console.error("Error logging out:", error);
-      } else {
-        console.log("User logged out successfully");
-        this.$store.commit("setLoggedIn", false);
+      try {
+        await supabase.auth.signOut();
+        this.isLoggedIn = false;
+        this.user = null;
+        this.userRole = "";
         this.showLogoutModal = false;
-        this.$router.push("/");
+        router.push("/");
+      } catch (error) {
+        console.error("Error logging out:", error);
       }
     },
+    
     toggleChatHead() {
       this.showChat = !this.showChat;
     },
+    
     clearUnread() {
       this.hasUnreadMessage = false;
     },
-  },
-  created() {
-    // Check user role early in the component lifecycle
-    if (this.isLoggedIn) {
-      this.fetchUserData();
+    
+    // Method to check if user has access to a specific route
+    hasRouteAccess(routePath) {
+      const route = this.navLinks.find(link => link.path === routePath);
+      if (!route) return true; // If route not in navLinks, assume it's public
+      return this.userRole && route.allowedRoles.includes(this.userRole);
     }
   },
-  mounted() {
-    // Keep fetchUserData here as a fallback
-    if (this.isLoggedIn && !this.userRole) {
-      this.fetchUserData();
-    }
-  },
+  
+  async created() {
+    // Set up auth state change listener
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        this.isLoggedIn = true;
+        this.fetchUserData();
+      } else if (event === 'SIGNED_OUT') {
+        this.isLoggedIn = false;
+        this.user = null;
+        this.userRole = "";
+      }
+    });
+    
+    // Initial auth check
+    await this.checkAuthStatus();
+  }
 };
 </script>
 
-
 <style>
-
-
 /* Modern color variables */
 :root {
   --primary: #4f46e5;
@@ -729,5 +783,29 @@ body {
 
 .confirm-button:hover {
   background: #dc2626;
+}
+
+/* Add to the style section */
+
+.login-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 1rem;
+  background: rgba(79, 70, 229, 0.1);
+  border-radius: 16px;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  background: #10b981;
+  border-radius: 50%;
+}
+
+.status-text {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--primary);
 }
 </style>
